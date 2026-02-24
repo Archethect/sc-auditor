@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+spec/
+
+# Build
+dist/
+build/
+*.tgz
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+
+# Coverage
+coverage/
+
+# Temp
+tmp/
+
+# Worktrees
+.worktrees/
+
+#claude
+.claude/settings.local.json
+
+# Generated
+docs/.codebase-map.json
+.ralpr/
