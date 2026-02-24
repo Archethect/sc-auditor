@@ -1,0 +1,6 @@
+{
+  "name": "sc-auditor",
+  "version": "0.3.0",
+  "description": "Smart contract security auditor with static analysis, Solodit findings search, Cyfrin checklist integration, and interactive Map-Hunt-Attack methodology",
+  "author": { "name": "Archethect" }
+}

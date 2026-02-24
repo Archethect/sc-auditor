@@ -1,0 +1,64 @@
+[
+  {
+    "category": "Attacker's Mindset",
+    "description": "Common attack vectors",
+    "data": [
+      {
+        "category": "Denial-Of-Service Attack",
+        "description": "DOS attack patterns",
+        "data": [
+          {
+            "id": "SOL-AM-DOSA-1",
+            "question": "Can external calls cause DOS?",
+            "description": "External calls may revert and block execution",
+            "remediation": "Use pull over push pattern",
+            "references": ["https://example.com/dos"],
+            "tags": ["dos", "external-call"]
+          }
+        ]
+      },
+      {
+        "category": "Reentrancy Attack",
+        "description": "Reentrancy patterns",
+        "data": [
+          {
+            "id": "SOL-AM-REEN-1",
+            "question": "Is reentrancy possible?",
+            "description": "State changes after external calls",
+            "remediation": "Use checks-effects-interactions",
+            "references": ["https://example.com/reentrancy"],
+            "tags": ["reentrancy"]
+          },
+          {
+            "id": "SOL-AM-REEN-2",
+            "question": "Is cross-function reentrancy possible?",
+            "description": "Multiple functions share state",
+            "remediation": "Use reentrancy guards",
+            "references": [],
+            "tags": ["reentrancy", "cross-function"]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "category": "Basics",
+    "description": "Basic security checks",
+    "data": [
+      {
+        "category": "Access Control",
+        "description": "Access control patterns",
+        "data": [
+          {
+            "id": "SOL-AC-1",
+            "question": "Are admin functions protected?",
+            "description": "Admin functions should have access control",
+            "remediation": "Use onlyOwner or role-based access",
+            "references": ["https://example.com/access"],
+            "tags": ["access-control"]
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,52 @@
+{
+  "name": "sc-auditor",
+  "version": "0.3.0",
+  "description": "Smart Contract Security Auditor Plugin",
+  "type": "module",
+  "main": "dist/mcp/main.js",
+  "bin": {
+    "sc-auditor": "dist/mcp/main.js"
+  },
+  "files": [
+    "dist/",
+    "config.example.json",
+    ".agents/",
+    "skills/",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "mcp",
+    "security",
+    "audit",
+    "solidity",
+    "smart-contracts",
+    "slither",
+    "aderyn",
+    "codex",
+    "claude-code"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "postbuild": "node -e \"const f='dist/mcp/main.js';const c=require('fs').readFileSync(f,'utf8');if(!c.startsWith('#!'))require('fs').writeFileSync(f,'#!/usr/bin/env node\\n'+c)\"",
+    "prepare": "tsc",
+    "typecheck": "tsc --noEmit -p tsconfig.check.json",
+    "lint": "biome lint",
+    "test": "vitest run"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.13",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^25.2.0",
+    "js-yaml": "^4.1.1",
+    "typescript": "^5.0.0",
+    "vitest": "^4.0.18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.3",
+    "zod": "^4.3.6"
+  }
+}

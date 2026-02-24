@@ -1,0 +1,43 @@
+{
+  "success": true,
+  "results": {
+    "detectors": [
+      {
+        "check": "reentrancy-eth",
+        "impact": "High",
+        "confidence": "Medium",
+        "description": "Reentrancy in SimpleVault.withdraw(uint256):\n\tExternal calls:\n\t- (success) = msg.sender.call{value: amount}()\n\tState variables written after the call(s):\n\t- balances[msg.sender] -= amount",
+        "elements": [
+          {
+            "type": "function",
+            "name": "withdraw",
+            "source_mapping": {
+              "filename_relative": "SimpleVault.sol",
+              "lines": [13, 14, 15, 16, 17, 18, 19, 20],
+              "starting_column": 5,
+              "ending_column": 6
+            }
+          }
+        ]
+      },
+      {
+        "check": "low-level-calls",
+        "impact": "Informational",
+        "confidence": "High",
+        "description": "Low level call in SimpleVault.withdraw(uint256)",
+        "elements": [
+          {
+            "type": "node",
+            "name": "(success) = msg.sender.call{value: amount}()",
+            "source_mapping": {
+              "filename_relative": "SimpleVault.sol",
+              "lines": [15],
+              "starting_column": 9,
+              "ending_column": 62
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "high_issues": {
+    "issues": [
+      {
+        "title": "Reentrancy vulnerability in withdraw function",
+        "description": "State variable `balances` is modified after an external call to `msg.sender`",
+        "detector_name": "reentrancy",
+        "instances": [
+          {
+            "contract_path": "SimpleVault.sol",
+            "line_no": 15,
+            "src": "155:45:0",
+            "src_char": "(bool success, ) = msg.sender.call{value: amount}(\"\")"
+          }
+        ]
+      }
+    ]
+  },
+  "low_issues": {
+    "issues": [
+      {
+        "title": "Missing zero-address validation",
+        "description": "Function does not validate that address parameters are not zero",
+        "detector_name": "zero-address",
+        "instances": [
+          {
+            "contract_path": "SimpleVault.sol",
+            "line_no": 8
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "sc-auditor": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/dist/mcp/main.js"
+      ],
+      "cwd": "${CLAUDE_PLUGIN_ROOT}",
+      "env": {
+        "CLAUDE_PLUGIN_ROOT": "."
+      }
+    }
+  }
+}

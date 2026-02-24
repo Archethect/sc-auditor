@@ -1,0 +1,17 @@
+{
+  "default_severity": ["CRITICAL", "HIGH", "MEDIUM"],
+  "default_quality_score": 2,
+  "report_output_dir": "audits",
+  "max_findings_per_category": 10,
+  "max_deep_dives": 5,
+  "static_analysis": {
+    "slither_enabled": true,
+    "slither_path": "slither",
+    "aderyn_enabled": true,
+    "aderyn_path": "aderyn"
+  },
+  "llm_reasoning": {
+    "max_functions_per_category": 50,
+    "context_window_budget": 0.7
+  }
+}
