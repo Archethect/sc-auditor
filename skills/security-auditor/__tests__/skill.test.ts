@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import yaml from "js-yaml";
@@ -31,6 +31,11 @@ function extractBody(content: string): string {
   const match = content.match(/^---\n[\s\S]*?\n---\n([\s\S]*)$/);
   if (!match) throw new Error("No body found after frontmatter");
   return match[1];
+}
+
+/** Count lines in a string. */
+function lineCount(content: string): number {
+  return content.split("\n").length;
 }
 
 describe("AC1: SKILL.md exists with valid YAML frontmatter", () => {
@@ -592,5 +597,169 @@ describe("AC20: ATTACK phase references generate-foundry-poc tool", () => {
   it("body references generate-foundry-poc in ATTACK phase", () => {
     const body = extractBody(readSkill());
     expect(body).toMatch(/generate-foundry-poc/);
+  });
+});
+
+// ============================================================================
+// v0.4.0 Lean Orchestrator Tests (AC21-AC29)
+// ============================================================================
+
+describe("AC21: Agent dispatch for MAP phase", () => {
+  it("MAP phase instructs dispatching a sub-agent via Agent tool", () => {
+    const body = extractBody(readSkill());
+    // Extract MAP phase section (from Phase 2 to Phase 3)
+    const mapSection = body.match(/Phase 2.*MAP[\s\S]*?(?=Phase 3)/i)?.[0] ?? "";
+    expect(mapSection).toMatch(/Agent/);
+  });
+
+  it("MAP phase references map.md prompt pack for the sub-agent", () => {
+    const body = extractBody(readSkill());
+    const mapSection = body.match(/Phase 2.*MAP[\s\S]*?(?=Phase 3)/i)?.[0] ?? "";
+    expect(mapSection).toMatch(/map\.md/);
+  });
+
+  it("MAP agent receives SystemMapArtifact or produces it", () => {
+    const body = extractBody(readSkill());
+    const mapSection = body.match(/Phase 2.*MAP[\s\S]*?(?=Phase 3)/i)?.[0] ?? "";
+    expect(mapSection).toMatch(/SystemMapArtifact/i);
+  });
+});
+
+describe("AC22: Agent dispatch for HUNT phase — 4 parallel lanes", () => {
+  it("HUNT phase dispatches 4 parallel lane agents", () => {
+    const body = extractBody(readSkill());
+    const huntSection = body.match(/Phase 3.*HUNT[\s\S]*?(?=Phase 4)/i)?.[0] ?? "";
+    // Should mention dispatching agents for each lane or "4" parallel agents
+    expect(huntSection).toMatch(/Agent/);
+    expect(huntSection).toMatch(/parallel/i);
+  });
+
+  it("each HUNT lane agent references its lane-specific prompt pack", () => {
+    const body = extractBody(readSkill());
+    const huntSection = body.match(/Phase 3.*HUNT[\s\S]*?(?=Phase 4)/i)?.[0] ?? "";
+    expect(huntSection).toMatch(/hunt-callback-liveness\.md/);
+    expect(huntSection).toMatch(/hunt-accounting-entitlement\.md/);
+    expect(huntSection).toMatch(/hunt-semantic-consistency\.md/);
+    expect(huntSection).toMatch(/hunt-token-oracle-statefulness\.md/);
+  });
+
+  it("optional 5th adversarial agent for deep mode", () => {
+    const body = extractBody(readSkill());
+    const huntSection = body.match(/Phase 3.*HUNT[\s\S]*?(?=Phase 4)/i)?.[0] ?? "";
+    expect(huntSection).toMatch(/adversarial_deep/);
+    expect(huntSection).toMatch(/deep/i);
+  });
+});
+
+describe("AC23: Agent dispatch for ATTACK phase — parallel per hotspot", () => {
+  it("ATTACK phase dispatches parallel agents per hotspot", () => {
+    const body = extractBody(readSkill());
+    const attackSection = body.match(/Phase 4.*ATTACK[\s\S]*?(?=Phase 5)/i)?.[0] ?? "";
+    expect(attackSection).toMatch(/Agent/);
+    expect(attackSection).toMatch(/parallel/i);
+  });
+
+  it("ATTACK phase references attack.md prompt pack", () => {
+    const body = extractBody(readSkill());
+    const attackSection = body.match(/Phase 4.*ATTACK[\s\S]*?(?=Phase 5)/i)?.[0] ?? "";
+    expect(attackSection).toMatch(/attack\.md/);
+  });
+});
+
+describe("AC24: Agent dispatch for VERIFY phase — parallel per finding", () => {
+  it("VERIFY phase dispatches parallel agents per finding", () => {
+    const body = extractBody(readSkill());
+    const verifySection = body.match(/Phase 5.*VERIFY[\s\S]*?(?=Phase 6)/i)?.[0] ?? "";
+    expect(verifySection).toMatch(/Agent/);
+    expect(verifySection).toMatch(/parallel/i);
+  });
+
+  it("VERIFY agent references skeptic-judge pipeline", () => {
+    const body = extractBody(readSkill());
+    const verifySection = body.match(/Phase 5.*VERIFY[\s\S]*?(?=Phase 6)/i)?.[0] ?? "";
+    expect(verifySection).toMatch(/skeptic|judge/i);
+  });
+});
+
+describe("AC25: Mandatory proof in ATTACK phase", () => {
+  it("ATTACK phase requires proof generation — uses 'must' or 'required' language", () => {
+    const body = extractBody(readSkill());
+    const attackSection = body.match(/Phase 4.*ATTACK[\s\S]*?(?=Phase 5)/i)?.[0] ?? "";
+    // Must use mandatory language (not "optional" or "may") around proof tools
+    expect(attackSection).toMatch(/must.*(?:generate-foundry-poc|proof|echidna|medusa|halmos)/is);
+  });
+
+  it("ATTACK phase does NOT describe proof scaffolding as optional", () => {
+    const body = extractBody(readSkill());
+    const attackSection = body.match(/Phase 4.*ATTACK[\s\S]*?(?=Phase 5)/i)?.[0] ?? "";
+    // The old pattern had "### 5. Proof Scaffolding (Optional)" — this should no longer be present
+    expect(attackSection).not.toMatch(/Proof.*\(Optional\)/i);
+  });
+
+  it("ATTACK phase mentions at least one proof method tool", () => {
+    const body = extractBody(readSkill());
+    const attackSection = body.match(/Phase 4.*ATTACK[\s\S]*?(?=Phase 5)/i)?.[0] ?? "";
+    const hasProofTool =
+      /generate-foundry-poc/.test(attackSection) ||
+      /run-echidna/.test(attackSection) ||
+      /run-medusa/.test(attackSection) ||
+      /run-halmos/.test(attackSection);
+    expect(hasProofTool).toBe(true);
+  });
+});
+
+describe("AC26: Parallel execution structure for HUNT and ATTACK", () => {
+  it("HUNT phase describes parallel dispatch pattern", () => {
+    const body = extractBody(readSkill());
+    const huntSection = body.match(/Phase 3.*HUNT[\s\S]*?(?=Phase 4)/i)?.[0] ?? "";
+    expect(huntSection).toMatch(/[Pp]arallel/);
+    expect(huntSection).toMatch(/Agent/);
+  });
+
+  it("ATTACK phase describes parallel dispatch pattern", () => {
+    const body = extractBody(readSkill());
+    const attackSection = body.match(/Phase 4.*ATTACK[\s\S]*?(?=Phase 5)/i)?.[0] ?? "";
+    expect(attackSection).toMatch(/[Pp]arallel/);
+    expect(attackSection).toMatch(/Agent/);
+  });
+});
+
+describe("AC27: Serial fallback documented", () => {
+  it("body documents serial fallback when Agent tool is unavailable", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/[Ss]erial.*fallback/i);
+  });
+
+  it("serial fallback is tied to Agent tool unavailability", () => {
+    const body = extractBody(readSkill());
+    // Should mention running serially when Agent is unavailable or subagents not supported
+    expect(body).toMatch(/Agent.*unavailable|not.*available.*serial|serial.*(?:when|if).*(?:no|not|without).*Agent/is);
+  });
+});
+
+describe("AC28: attack.md prompt pack exists", () => {
+  it("attack.md file exists at skills/security-auditor/assets/prompts/attack.md", () => {
+    const attackPromptPath = resolve(
+      ROOT,
+      "skills/security-auditor/assets/prompts/attack.md",
+    );
+    expect(existsSync(attackPromptPath)).toBe(true);
+  });
+});
+
+describe("AC29: Orchestrator is lean (~200 lines)", () => {
+  it("SKILL.md is significantly shorter than the old monolithic version (~400 lines)", () => {
+    const content = readSkill();
+    const lines = lineCount(content);
+    // The old monolithic version was ~404 lines. The new lean orchestrator
+    // should be roughly ~200 lines (allowing some margin). We check < 300
+    // to ensure it's genuinely shorter, not still the old bloated version.
+    expect(lines).toBeLessThan(300);
+  });
+
+  it("SKILL.md is at least 100 lines (not empty or trivially small)", () => {
+    const content = readSkill();
+    const lines = lineCount(content);
+    expect(lines).toBeGreaterThanOrEqual(100);
   });
 });
