@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { bootServer } from "../main.js";
 
 describe("MCP entry point (main.ts)", () => {
-  it("bootServer() creates a server with all 4 tools registered", async () => {
+  it("bootServer() creates a server with all 11 tools registered", async () => {
     const server = bootServer();
     const [clientTransport, serverTransport] =
       InMemoryTransport.createLinkedPair();
@@ -15,14 +15,21 @@ describe("MCP entry point (main.ts)", () => {
     await client.connect(clientTransport);
 
     const { tools } = await client.listTools();
-    expect(tools).toHaveLength(4);
+    expect(tools).toHaveLength(11);
 
     const names = tools.map((t) => t.name).sort();
     expect(names).toEqual([
+      "build-system-map",
+      "derive-hotspots",
+      "generate-foundry-poc",
       "get_checklist",
       "run-aderyn",
+      "run-echidna",
+      "run-halmos",
+      "run-medusa",
       "run-slither",
       "search_findings",
+      "verify-finding",
     ]);
 
     await client.close();
@@ -45,15 +52,15 @@ describe("MCP entry point (main.ts)", () => {
 
     const { tools: tools1 } = await client1.listTools();
     const { tools: tools2 } = await client2.listTools();
-    expect(tools1).toHaveLength(4);
-    expect(tools2).toHaveLength(4);
+    expect(tools1).toHaveLength(11);
+    expect(tools2).toHaveLength(11);
 
     // Closing one server does not affect the other
     await client1.close();
     await server1.close();
 
     const { tools: stillWorking } = await client2.listTools();
-    expect(stillWorking).toHaveLength(4);
+    expect(stillWorking).toHaveLength(11);
 
     await client2.close();
     await server2.close();

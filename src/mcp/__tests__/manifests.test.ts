@@ -112,11 +112,15 @@ describe("AC5: CLAUDE.md documents tools and skills", () => {
   const content = readText("CLAUDE.md");
 
   const EXPECTED_TOOLS = [
+    "build-system-map",
+    "derive-hotspots",
+    "generate-foundry-poc",
     "get-finding",
     "get_checklist",
     "run-aderyn",
     "run-slither",
     "search_findings",
+    "verify-finding",
   ] as const;
 
   it("Tools Reference table lists exactly the expected tools", () => {

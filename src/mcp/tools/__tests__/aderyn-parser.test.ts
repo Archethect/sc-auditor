@@ -95,8 +95,8 @@ describe("AC1: high_issues mapped to HIGH severity, low_issues mapped to LOW sev
   });
 });
 
-describe("AC2: All findings have confidence: Confirmed and source: aderyn", () => {
-  it("sets confidence to Confirmed on high severity findings", () => {
+describe("AC2: Conservative confidence mapping and source: aderyn", () => {
+  it("sets confidence to Likely on high severity findings (conservative)", () => {
     const output = createAderynOutput({
       highIssues: [createIssue({ title: "High Issue" })],
     });
@@ -104,10 +104,10 @@ describe("AC2: All findings have confidence: Confirmed and source: aderyn", () =
     const findings = parseAderynOutput(output);
 
     expect(findings).toHaveLength(1);
-    expect(findings[0].confidence).toBe("Confirmed");
+    expect(findings[0].confidence).toBe("Likely");
   });
 
-  it("sets confidence to Confirmed on low severity findings", () => {
+  it("sets confidence to Possible on low severity findings (conservative)", () => {
     const output = createAderynOutput({
       lowIssues: [createIssue({ title: "Low Issue" })],
     });
@@ -115,7 +115,7 @@ describe("AC2: All findings have confidence: Confirmed and source: aderyn", () =
     const findings = parseAderynOutput(output);
 
     expect(findings).toHaveLength(1);
-    expect(findings[0].confidence).toBe("Confirmed");
+    expect(findings[0].confidence).toBe("Possible");
   });
 
   it("sets source to aderyn on all findings", () => {

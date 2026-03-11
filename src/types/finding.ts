@@ -4,6 +4,47 @@
 export type FindingSource = "slither" | "aderyn" | "manual";
 
 /**
+ * Lifecycle status of a finding through the verification pipeline.
+ *
+ * - candidate: Initial state, not yet verified.
+ * - verified: Confirmed by the verification process.
+ * - discarded: Ruled out by the verification process.
+ *
+ * @default "candidate"
+ */
+export type FindingStatus = "candidate" | "verified" | "discarded";
+
+/**
+ * Type of proof used to verify a finding.
+ *
+ * - none: No proof provided.
+ * - foundry_poc: Foundry-based proof of concept.
+ * - echidna: Echidna fuzzer proof.
+ * - medusa: Medusa fuzzer proof.
+ * - halmos: Halmos symbolic execution proof.
+ * - ityfuzz: ItyFuzz fuzzer proof.
+ *
+ * @default "none"
+ */
+export type ProofType = "none" | "foundry_poc" | "echidna" | "medusa" | "halmos" | "ityfuzz";
+
+/**
+ * Detector category for classifying static analysis findings.
+ */
+export type DetectorCategory =
+  | "access_control"
+  | "accounting_entitlement"
+  | "callback_liveness"
+  | "semantic_consistency"
+  | "state_machine"
+  | "math_rounding"
+  | "reentrancy"
+  | "oracle_randomness"
+  | "token_integration"
+  | "upgradeability"
+  | "other";
+
+/**
  * Severity levels for audit findings, ordered from most to least severe.
  *
  * Maps to SoloditSeverity: CRITICAL->Critical, HIGH->High, MEDIUM->Medium,
@@ -87,4 +128,30 @@ export interface Finding {
   attack_scenario?: string;
   /** Static analysis detector ID (e.g., Slither detector name) */
   detector_id?: string;
+  /**
+   * Lifecycle status of this finding.
+   * @default "candidate"
+   */
+  status?: FindingStatus;
+  /**
+   * Type of proof used to verify this finding.
+   * @default "none"
+   */
+  proof_type?: ProofType;
+  /** Key identifying the root cause shared across related findings. */
+  root_cause_key?: string;
+  /**
+   * Number of independent evidence paths supporting this finding.
+   * @default 1
+   */
+  independence_count?: number;
+  /** File path to a witness/proof-of-concept test. */
+  witness_path?: string;
+  /** Free-form notes from the verification process. */
+  verification_notes?: string;
+  /**
+   * Whether this finding is visible in benchmark mode.
+   * @default true
+   */
+  benchmark_mode_visible?: boolean;
 }

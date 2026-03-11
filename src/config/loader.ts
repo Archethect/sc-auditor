@@ -1,6 +1,14 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Config, StaticAnalysisConfig, LLMReasoningConfig } from "../types/config.js";
+import type {
+  Config,
+  LLMReasoningConfig,
+  ProofToolsConfig,
+  StaticAnalysisConfig,
+  VerifyConfig,
+  WorkflowConfig,
+  WorkflowMode,
+} from "../types/config.js";
 import type { FindingSeverity } from "../types/finding.js";
 
 const VALID_SEVERITIES: ReadonlySet<string> = new Set<FindingSeverity>([
@@ -10,6 +18,12 @@ const VALID_SEVERITIES: ReadonlySet<string> = new Set<FindingSeverity>([
   "LOW",
   "GAS",
   "INFORMATIONAL",
+]);
+
+const VALID_WORKFLOW_MODES: ReadonlySet<string> = new Set<WorkflowMode>([
+  "default",
+  "deep",
+  "benchmark",
 ]);
 
 const DEFAULTS: Config = {
@@ -27,6 +41,22 @@ const DEFAULTS: Config = {
   llm_reasoning: {
     max_functions_per_category: 50,
     context_window_budget: 0.7,
+  },
+  workflow: {
+    mode: "default",
+    parallel_hunters: false,
+    autonomous: false,
+    require_witness_for_high: false,
+  },
+  proof_tools: {
+    foundry_enabled: true,
+    echidna_enabled: false,
+    medusa_enabled: false,
+    halmos_enabled: false,
+    ityfuzz_enabled: false,
+  },
+  verify: {
+    demote_unproven_medium_high: false,
   },
 };
 
@@ -289,6 +319,111 @@ function validateLLMReasoning(
 }
 
 /**
+ * Validates and normalizes the workflow config section.
+ */
+function validateWorkflow(
+  input: Record<string, unknown>,
+): WorkflowConfig {
+  const section = input["workflow"];
+  if (section === undefined) {
+    return { ...DEFAULTS.workflow };
+  }
+  if (typeof section !== "object" || section === null || Array.isArray(section)) {
+    throw validationError("workflow must be an object");
+  }
+  const wf = section as Record<string, unknown>;
+  if (wf["mode"] !== undefined) {
+    if (typeof wf["mode"] !== "string" || !VALID_WORKFLOW_MODES.has(wf["mode"])) {
+      throw validationError(
+        `workflow.mode must be one of: ${[...VALID_WORKFLOW_MODES].join(", ")}`,
+      );
+    }
+  }
+  validateBoolean(wf, "parallel_hunters");
+  validateBoolean(wf, "autonomous");
+  validateBoolean(wf, "require_witness_for_high");
+  return {
+    mode:
+      (wf["mode"] as WorkflowMode | undefined) ??
+      DEFAULTS.workflow.mode,
+    parallel_hunters:
+      (wf["parallel_hunters"] as boolean | undefined) ??
+      DEFAULTS.workflow.parallel_hunters,
+    autonomous:
+      (wf["autonomous"] as boolean | undefined) ??
+      DEFAULTS.workflow.autonomous,
+    require_witness_for_high:
+      (wf["require_witness_for_high"] as boolean | undefined) ??
+      DEFAULTS.workflow.require_witness_for_high,
+  };
+}
+
+/**
+ * Validates and normalizes the proof_tools config section.
+ */
+function validateProofTools(
+  input: Record<string, unknown>,
+): ProofToolsConfig {
+  const section = input["proof_tools"];
+  if (section === undefined) {
+    return { ...DEFAULTS.proof_tools };
+  }
+  if (typeof section !== "object" || section === null || Array.isArray(section)) {
+    throw validationError("proof_tools must be an object");
+  }
+  const pt = section as Record<string, unknown>;
+  validateBoolean(pt, "foundry_enabled");
+  validateBoolean(pt, "echidna_enabled");
+  validateBoolean(pt, "medusa_enabled");
+  validateBoolean(pt, "halmos_enabled");
+  validateBoolean(pt, "ityfuzz_enabled");
+  return {
+    foundry_enabled:
+      (pt["foundry_enabled"] as boolean | undefined) ??
+      DEFAULTS.proof_tools.foundry_enabled,
+    echidna_enabled:
+      (pt["echidna_enabled"] as boolean | undefined) ??
+      DEFAULTS.proof_tools.echidna_enabled,
+    medusa_enabled:
+      (pt["medusa_enabled"] as boolean | undefined) ??
+      DEFAULTS.proof_tools.medusa_enabled,
+    halmos_enabled:
+      (pt["halmos_enabled"] as boolean | undefined) ??
+      DEFAULTS.proof_tools.halmos_enabled,
+    ityfuzz_enabled:
+      (pt["ityfuzz_enabled"] as boolean | undefined) ??
+      DEFAULTS.proof_tools.ityfuzz_enabled,
+  };
+}
+
+/**
+ * Validates and normalizes the verify config section.
+ * In benchmark mode, demote_unproven_medium_high defaults to true.
+ */
+function validateVerify(
+  input: Record<string, unknown>,
+  workflowMode: WorkflowMode,
+): VerifyConfig {
+  const isBenchmark = workflowMode === "benchmark";
+  const defaultDemote = isBenchmark ? true : DEFAULTS.verify.demote_unproven_medium_high;
+
+  const section = input["verify"];
+  if (section === undefined) {
+    return { demote_unproven_medium_high: defaultDemote };
+  }
+  if (typeof section !== "object" || section === null || Array.isArray(section)) {
+    throw validationError("verify must be an object");
+  }
+  const v = section as Record<string, unknown>;
+  validateBoolean(v, "demote_unproven_medium_high");
+  return {
+    demote_unproven_medium_high:
+      (v["demote_unproven_medium_high"] as boolean | undefined) ??
+      defaultDemote,
+  };
+}
+
+/**
  * Validates and normalizes raw config input into a fully resolved Config object.
  */
 function validateAndNormalize(raw: unknown): Config {
@@ -328,6 +463,9 @@ function validateAndNormalize(raw: unknown): Config {
 
   const static_analysis = validateStaticAnalysis(input);
   const llm_reasoning = validateLLMReasoning(input);
+  const workflow = validateWorkflow(input);
+  const proof_tools = validateProofTools(input);
+  const verify = validateVerify(input, workflow.mode);
 
   return {
     default_severity:
@@ -346,6 +484,9 @@ function validateAndNormalize(raw: unknown): Config {
       (input["max_deep_dives"] as number) ?? DEFAULTS.max_deep_dives,
     static_analysis,
     llm_reasoning,
+    workflow,
+    proof_tools,
+    verify,
   };
 }
 

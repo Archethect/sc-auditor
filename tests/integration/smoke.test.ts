@@ -4,7 +4,7 @@
  * Manual Smoke Test:
  * 1. Start the MCP server: npx tsx src/mcp/main.ts
  * 2. Connect with an MCP client (e.g., Claude Desktop, mcp-cli)
- * 3. List tools — verify 4 tools: run-slither, run-aderyn, get_checklist, search_findings
+ * 3. List tools — verify 6 tools: build-system-map, derive-hotspots, run-slither, run-aderyn, get_checklist, search_findings
  * 4. Call get_checklist {} — verify checklist items returned
  * 5. Call run-slither { rootDir: "tests/fixtures/solidity" } — verify findings (needs slither)
  * 6. Call run-aderyn { rootDir: "tests/fixtures/solidity" } — verify findings (needs aderyn)
@@ -23,6 +23,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createMcpServer } from "../../src/mcp/server.js";
 import { parseAderynOutput } from "../../src/mcp/tools/aderyn-parser.js";
+import { registerBuildSystemMapTool } from "../../src/mcp/tools/build-system-map.js";
+import { registerDeriveHotspotsTool } from "../../src/mcp/tools/derive-hotspots.js";
 import { registerGetChecklistTool } from "../../src/mcp/tools/get-checklist.js";
 import { registerRunAderynTool } from "../../src/mcp/tools/run-aderyn.js";
 import { registerRunSlitherTool } from "../../src/mcp/tools/run-slither.js";
@@ -52,6 +54,8 @@ async function setupMcpTest(): Promise<{
 }> {
 	const server = createMcpServer();
 	const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+	registerBuildSystemMapTool(server);
+	registerDeriveHotspotsTool(server);
 	registerRunSlitherTool(server);
 	registerRunAderynTool(server);
 	registerGetChecklistTool(server);
@@ -124,7 +128,7 @@ describe("AC3: MCP server boots cleanly via InMemoryTransport", () => {
 	});
 });
 
-describe("AC4: client.listTools() returns all 4 tools", () => {
+describe("AC4: client.listTools() returns all 6 tools", () => {
 	let tools: Tool[];
 	let cleanup: () => Promise<void>;
 
@@ -138,13 +142,13 @@ describe("AC4: client.listTools() returns all 4 tools", () => {
 		await cleanup();
 	});
 
-	it("returns exactly 4 tools", () => {
-		expect(tools).toHaveLength(4);
+	it("returns exactly 6 tools", () => {
+		expect(tools).toHaveLength(6);
 	});
 
-	it("includes run-slither, run-aderyn, get_checklist, search_findings", () => {
+	it("includes build-system-map, derive-hotspots, run-slither, run-aderyn, get_checklist, search_findings", () => {
 		const names = tools.map((t) => t.name).sort();
-		expect(names).toEqual(["get_checklist", "run-aderyn", "run-slither", "search_findings"]);
+		expect(names).toEqual(["build-system-map", "derive-hotspots", "get_checklist", "run-aderyn", "run-slither", "search_findings"]);
 	});
 });
 

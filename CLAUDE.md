@@ -29,6 +29,10 @@ Tools are registered by their respective tool modules. The MCP server starts wit
 | `get_checklist` | (none) | ChecklistItem[] | Get Cyfrin audit checklist |
 | `run-slither` | `rootDir` (string) | SlitherExecutionResult | Execute Slither static analysis on a directory |
 | `run-aderyn` | `rootDir` (string) | AderynExecutionResult | Execute Aderyn static analysis on a directory |
+| `build-system-map` | `rootDir` (string) | SystemMapArtifact | Build a complete system map of the protocol architecture |
+| `derive-hotspots` | `rootDir` (string), `mode?` (WorkflowMode) | Hotspot[] | Derive prioritized hotspots from the system map |
+| `verify-finding` | `rootDir` (string), `finding` (Finding), `systemMap` (SystemMapArtifact) | VerificationArtifact | Verify a finding through the skeptic-judge pipeline |
+| `generate-foundry-poc` | `rootDir` (string), `hotspot` (Hotspot) | scaffold metadata | Generate a Foundry PoC scaffold for a hotspot |
 
 ## Skills
 

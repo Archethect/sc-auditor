@@ -192,6 +192,52 @@ An empty config.json (or no config.json at all) is valid — all settings have d
 | `max_functions_per_category` | integer | No | `50` | Max functions to analyze per category (1-500) |
 | `context_window_budget` | number | No | `0.7` | Fraction of context window to use (0.1-1.0) |
 
+#### Workflow Configuration (`workflow`)
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `mode` | string | No | `"default"` | Workflow mode: `default`, `deep`, or `benchmark` |
+| `parallel_hunters` | boolean | No | `false` | Whether to run hunter agents in parallel |
+| `autonomous` | boolean | No | `false` | Whether the audit runs autonomously without user prompts |
+| `require_witness_for_high` | boolean | No | `false` | Whether high-severity findings require a witness/PoC |
+
+**Workflow Modes:**
+
+- **`default`** -- Standard audit workflow with MAP-HUNT-ATTACK phases. Suitable for most audits.
+- **`deep`** -- Extended analysis with more thorough coverage. Runs additional passes and cross-references more sources.
+- **`benchmark`** -- Strict mode for competitive audits. Applies gating rules: unproven medium/high findings are demoted to informational. Report splits findings into Scored Findings (verified with proof) and Research Candidates (unverified).
+
+#### Proof Tools Configuration (`proof_tools`)
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `foundry_enabled` | boolean | No | `true` | Whether Foundry is available for PoC generation |
+| `echidna_enabled` | boolean | No | `false` | Whether Echidna is available for fuzzing |
+| `medusa_enabled` | boolean | No | `false` | Whether Medusa is available for fuzzing |
+| `halmos_enabled` | boolean | No | `false` | Whether Halmos is available for symbolic execution |
+| `ityfuzz_enabled` | boolean | No | `false` | Whether ItyFuzz is available for fuzzing |
+
+#### Verification Configuration (`verify`)
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `demote_unproven_medium_high` | boolean | No | `false` (`true` in benchmark mode) | Whether to demote unproven medium/high findings to informational |
+
+### Report Split
+
+In **benchmark mode**, the final report is split into two sections:
+
+1. **Scored Findings** -- Verified findings with proof (PoC, fuzzer witness, or symbolic execution result). These are the findings submitted for scoring.
+2. **Research Candidates** -- Findings that passed the skeptic review but lack formal proof. These are informational and not scored.
+
+### Benchmark Gating Rules
+
+When `workflow.mode` is `"benchmark"`:
+
+- `verify.demote_unproven_medium_high` defaults to `true` (can be overridden to `false`)
+- Medium and high severity findings without a witness/PoC are automatically demoted to informational
+- The report clearly separates scored findings from research candidates
+
 ### Environment Variables
 
 | Variable | Description |
@@ -217,6 +263,22 @@ An empty config.json (or no config.json at all) is valid — all settings have d
   "llm_reasoning": {
     "max_functions_per_category": 50,
     "context_window_budget": 0.7
+  },
+  "workflow": {
+    "mode": "default",
+    "parallel_hunters": false,
+    "autonomous": false,
+    "require_witness_for_high": false
+  },
+  "proof_tools": {
+    "foundry_enabled": true,
+    "echidna_enabled": false,
+    "medusa_enabled": false,
+    "halmos_enabled": false,
+    "ityfuzz_enabled": false
+  },
+  "verify": {
+    "demote_unproven_medium_high": false
   }
 }
 ```

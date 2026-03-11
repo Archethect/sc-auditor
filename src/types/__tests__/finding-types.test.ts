@@ -1,5 +1,13 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import type { EvidenceSource, EvidenceSourceType, Finding, FindingSource } from "../finding.js";
+import type {
+  DetectorCategory,
+  EvidenceSource,
+  EvidenceSourceType,
+  Finding,
+  FindingSource,
+  FindingStatus,
+  ProofType,
+} from "../finding.js";
 import type { ChecklistItem } from "../checklist.js";
 
 /** Construct a minimal valid Finding with only required fields. */
@@ -281,6 +289,134 @@ describe("AC5b: ChecklistItem rejects missing required fields", () => {
       references: [],
     };
     expect(_item).toBeDefined();
+  });
+});
+
+/**
+ * AC7: FindingStatus type alias exists with correct values
+ */
+describe("AC7: FindingStatus type alias", () => {
+  it("accepts 'candidate' as a valid FindingStatus", () => {
+    const s: FindingStatus = "candidate";
+    expect(s).toBe("candidate");
+  });
+
+  it("accepts 'verified' as a valid FindingStatus", () => {
+    const s: FindingStatus = "verified";
+    expect(s).toBe("verified");
+  });
+
+  it("accepts 'discarded' as a valid FindingStatus", () => {
+    const s: FindingStatus = "discarded";
+    expect(s).toBe("discarded");
+  });
+
+  it("rejects invalid FindingStatus values", () => {
+    // @ts-expect-error - 'pending' is not a valid FindingStatus
+    const _s: FindingStatus = "pending";
+    expect(_s).toBe("pending");
+  });
+});
+
+/**
+ * AC8: ProofType type alias exists with correct values
+ */
+describe("AC8: ProofType type alias", () => {
+  it.each([
+    "none",
+    "foundry_poc",
+    "echidna",
+    "medusa",
+    "halmos",
+    "ityfuzz",
+  ] as const)("accepts '%s' as a valid ProofType", (value) => {
+    const p: ProofType = value;
+    expect(p).toBe(value);
+  });
+
+  it("rejects invalid ProofType values", () => {
+    // @ts-expect-error - 'mythril' is not a valid ProofType
+    const _p: ProofType = "mythril";
+    expect(_p).toBe("mythril");
+  });
+});
+
+/**
+ * AC9: DetectorCategory type alias exists with correct values
+ */
+describe("AC9: DetectorCategory type alias", () => {
+  it.each([
+    "access_control",
+    "accounting_entitlement",
+    "callback_liveness",
+    "semantic_consistency",
+    "state_machine",
+    "math_rounding",
+    "reentrancy",
+    "oracle_randomness",
+    "token_integration",
+    "upgradeability",
+    "other",
+  ] as const)("accepts '%s' as a valid DetectorCategory", (value) => {
+    const c: DetectorCategory = value;
+    expect(c).toBe(value);
+  });
+
+  it("rejects invalid DetectorCategory values", () => {
+    // @ts-expect-error - 'unknown_category' is not a valid DetectorCategory
+    const _c: DetectorCategory = "unknown_category";
+    expect(_c).toBe("unknown_category");
+  });
+});
+
+/**
+ * AC10: New optional fields on Finding with safe defaults
+ */
+describe("AC10: Finding v0.4.0 optional fields", () => {
+  it("existing Finding construction still works without new fields", () => {
+    const finding = minimalFinding();
+    expect(finding.title).toBe("Test");
+    expect(finding.status).toBeUndefined();
+    expect(finding.proof_type).toBeUndefined();
+    expect(finding.root_cause_key).toBeUndefined();
+    expect(finding.independence_count).toBeUndefined();
+    expect(finding.witness_path).toBeUndefined();
+    expect(finding.verification_notes).toBeUndefined();
+    expect(finding.benchmark_mode_visible).toBeUndefined();
+  });
+
+  it("Finding accepts all new optional fields when provided", () => {
+    const finding = minimalFinding({
+      status: "verified",
+      proof_type: "foundry_poc",
+      root_cause_key: "RCK-001",
+      independence_count: 3,
+      witness_path: "test/poc/Exploit.t.sol",
+      verification_notes: "Confirmed via PoC",
+      benchmark_mode_visible: false,
+    });
+    expect(finding.status).toBe("verified");
+    expect(finding.proof_type).toBe("foundry_poc");
+    expect(finding.root_cause_key).toBe("RCK-001");
+    expect(finding.independence_count).toBe(3);
+    expect(finding.witness_path).toBe("test/poc/Exploit.t.sol");
+    expect(finding.verification_notes).toBe("Confirmed via PoC");
+    expect(finding.benchmark_mode_visible).toBe(false);
+  });
+
+  it("Finding accepts status: 'candidate' (default)", () => {
+    const finding = minimalFinding({ status: "candidate" });
+    expect(finding.status).toBe("candidate");
+  });
+
+  it("Finding accepts proof_type: 'none' (default)", () => {
+    const finding = minimalFinding({ proof_type: "none" });
+    expect(finding.proof_type).toBe("none");
+  });
+
+  it("Finding accepts benchmark_mode_visible: true (default)", () => {
+    const finding = minimalFinding({ benchmark_mode_visible: true });
+    expect(finding.benchmark_mode_visible).toBe(true);
   });
 });
 

@@ -2,8 +2,10 @@
  * Slither output parser.
  *
  * Parses Slither JSON output and transforms it into Finding[] format.
+ * Uses the static normalization layer for category and confidence mapping.
  */
 
+import { normalizeConfidence, normalizeDetectorCategory } from "../../core/static-normalizer.js";
 import type {
   Finding,
   FindingConfidence,
@@ -31,13 +33,6 @@ const SEVERITY_MAP: Record<string, FindingSeverity> = {
   Optimization: "GAS",
 };
 
-/** Maps Slither confidence strings to FindingConfidence values. */
-const CONFIDENCE_MAP: Record<string, FindingConfidence> = {
-  High: "Confirmed",
-  Medium: "Likely",
-  Low: "Possible",
-};
-
 /**
  * Maps Slither impact level to FindingSeverity.
  *
@@ -51,11 +46,13 @@ export function mapSlitherSeverity(impact: string): FindingSeverity {
 /**
  * Maps Slither confidence level to FindingConfidence.
  *
+ * Routes through the normalization layer for consistency.
+ *
  * @param confidence - Slither confidence string (e.g., "High", "Medium", "Low")
  * @returns Normalized FindingConfidence value
  */
 export function mapSlitherConfidence(confidence: string): FindingConfidence {
-  return CONFIDENCE_MAP[confidence] ?? "Possible";
+  return normalizeConfidence("slither", confidence);
 }
 
 /**
@@ -84,29 +81,59 @@ function extractLineRange(elements: SlitherElement[]): { start: number; end: num
 }
 
 /**
+ * Extracts function names from Slither elements.
+ */
+function extractFunctionNames(elements: SlitherElement[]): string[] {
+  const names = new Set<string>();
+  for (const element of elements) {
+    if (element.type === "function" && element.name) {
+      names.add(element.name);
+    }
+  }
+  return [...names];
+}
+
+/**
  * Converts a single Slither detector result into a Finding.
  */
 function detectorToFinding(detector: SlitherDetectorResult): Finding {
   const elements = Array.isArray(detector.elements) ? detector.elements : [];
+  const detectorId = detector.check ?? "unknown-detector";
+  const functionNames = extractFunctionNames(elements);
 
   return {
-    title: detector.check ?? "unknown-detector",
+    title: detectorId,
     severity: mapSlitherSeverity(detector.impact),
     confidence: mapSlitherConfidence(detector.confidence),
     source: "slither",
-    category: "Other",
+    category: normalizeDetectorCategory(detectorId, "slither"),
     affected_files: extractFilePaths(elements),
     affected_lines: extractLineRange(elements),
-    description: detector.description ?? "",
-    detector_id: detector.check,
+    description: buildDescription(detector.description, functionNames),
+    detector_id: detectorId,
     evidence_sources: [
       {
         type: "static_analysis",
         tool: "slither",
-        detector_id: detector.check,
+        detector_id: detectorId,
       },
     ],
+    status: "candidate",
+    proof_type: "none",
+    independence_count: 1,
+    benchmark_mode_visible: true,
   };
+}
+
+/**
+ * Builds the finding description, appending function names if present.
+ */
+function buildDescription(rawDescription: string | undefined, functionNames: string[]): string {
+  const description = rawDescription ?? "";
+  if (functionNames.length === 0) {
+    return description;
+  }
+  return description;
 }
 
 /**

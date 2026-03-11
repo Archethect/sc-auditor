@@ -374,3 +374,223 @@ describe("AC10: Two user checkpoints", () => {
     expect(afterHunt).toMatch(/CHECKPOINT/i);
   });
 });
+
+describe("AC11: v0.4.0 allowed-tools includes new MCP tools", () => {
+  it("allowed-tools includes 'Agent'", () => {
+    const fm = parseFrontmatter(readSkill());
+    const tools = fm["allowed-tools"] as string[];
+    expect(tools).toContain("Agent");
+  });
+
+  it("allowed-tools includes 'mcp__sc-auditor__build-system-map'", () => {
+    const fm = parseFrontmatter(readSkill());
+    const tools = fm["allowed-tools"] as string[];
+    expect(tools).toContain("mcp__sc-auditor__build-system-map");
+  });
+
+  it("allowed-tools includes 'mcp__sc-auditor__derive-hotspots'", () => {
+    const fm = parseFrontmatter(readSkill());
+    const tools = fm["allowed-tools"] as string[];
+    expect(tools).toContain("mcp__sc-auditor__derive-hotspots");
+  });
+
+  it("allowed-tools includes 'mcp__sc-auditor__verify-finding'", () => {
+    const fm = parseFrontmatter(readSkill());
+    const tools = fm["allowed-tools"] as string[];
+    expect(tools).toContain("mcp__sc-auditor__verify-finding");
+  });
+
+  it("allowed-tools includes 'mcp__sc-auditor__generate-foundry-poc'", () => {
+    const fm = parseFrontmatter(readSkill());
+    const tools = fm["allowed-tools"] as string[];
+    expect(tools).toContain("mcp__sc-auditor__generate-foundry-poc");
+  });
+});
+
+describe("AC12: Six-phase workflow order", () => {
+  it("body contains all six phases: SETUP, MAP, HUNT, ATTACK, VERIFY, REPORT", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/SETUP/);
+    expect(body).toMatch(/MAP/);
+    expect(body).toMatch(/HUNT/);
+    expect(body).toMatch(/ATTACK/);
+    expect(body).toMatch(/VERIFY/);
+    expect(body).toMatch(/REPORT/);
+  });
+
+  it("phases appear in correct order: SETUP before MAP before HUNT before ATTACK before VERIFY before REPORT", () => {
+    const body = extractBody(readSkill());
+    const setupIdx = body.search(/Phase 1.*SETUP/i);
+    const mapIdx = body.search(/Phase 2.*MAP/i);
+    const huntIdx = body.search(/Phase 3.*HUNT/i);
+    const attackIdx = body.search(/Phase 4.*ATTACK/i);
+    const verifyIdx = body.search(/Phase 5.*VERIFY/i);
+    const reportIdx = body.search(/Phase 6.*REPORT/i);
+    expect(setupIdx).toBeGreaterThanOrEqual(0);
+    expect(mapIdx).toBeGreaterThan(setupIdx);
+    expect(huntIdx).toBeGreaterThan(mapIdx);
+    expect(attackIdx).toBeGreaterThan(huntIdx);
+    expect(verifyIdx).toBeGreaterThan(attackIdx);
+    expect(reportIdx).toBeGreaterThan(verifyIdx);
+  });
+});
+
+describe("AC13: VERIFY phase with skeptic-judge pipeline", () => {
+  it("body contains VERIFY phase section", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/VERIFY.*Skeptic.*Judge/is);
+  });
+
+  it("body references verify-finding tool", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/verify-finding/);
+  });
+
+  it("body mentions verified, candidate, and discarded statuses", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/verified/);
+    expect(body).toMatch(/candidate/);
+    expect(body).toMatch(/discarded/);
+  });
+
+  it("body mentions benchmark mode gating for unproven findings", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/benchmark.*mode/i);
+    expect(body).toMatch(/benchmark_mode_visible/);
+  });
+});
+
+describe("AC14: REPORT phase with structured sections", () => {
+  it("body contains REPORT phase section", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/REPORT.*Structured Output/is);
+  });
+
+  it("body contains Scored Findings section", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/Scored Findings/);
+  });
+
+  it("body contains Research Candidates section", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/Research Candidates/);
+  });
+
+  it("body contains Discarded Hypotheses section", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/Discarded Hypotheses/);
+  });
+});
+
+describe("AC15: HUNT lanes documented", () => {
+  it("body references callback_liveness lane", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/callback_liveness/);
+  });
+
+  it("body references accounting_entitlement lane", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/accounting_entitlement/);
+  });
+
+  it("body references semantic_consistency lane", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/semantic_consistency/);
+  });
+
+  it("body references token_oracle_statefulness lane", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/token_oracle_statefulness/);
+  });
+
+  it("body references adversarial_deep lane for deep mode", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/adversarial_deep/);
+  });
+
+  it("body documents parallel execution with Agent tool", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/[Pp]arallel.*execution/i);
+  });
+
+  it("body documents serial fallback for non-subagent hosts", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/[Ss]erial.*fallback/i);
+  });
+});
+
+describe("AC16: Solodit restriction documented", () => {
+  it("body explicitly restricts search_findings in HUNT phase", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/HUNT.*DO NOT.*search_findings/is);
+  });
+
+  it("body permits search_findings in ATTACK for corroboration", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/ATTACK.*MAY.*search_findings/is);
+  });
+
+  it("body permits search_findings in VERIFY for evidence", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/VERIFY.*MAY.*search_findings/is);
+  });
+});
+
+describe("AC17: v0.4.0 Finding fields in output format", () => {
+  it("body contains 'status' field with candidate/verified/discarded", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/\bstatus\b/);
+    expect(body).toMatch(/candidate.*verified.*discarded/is);
+  });
+
+  it("body contains 'proof_type' field", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/proof_type/);
+  });
+
+  it("body contains 'independence_count' field", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/independence_count/);
+  });
+
+  it("body contains 'benchmark_mode_visible' field", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/benchmark_mode_visible/);
+  });
+
+  it("body contains 'root_cause_key' field", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/root_cause_key/);
+  });
+
+  it("body contains 'witness_path' field", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/witness_path/);
+  });
+
+  it("body contains 'verification_notes' field", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/verification_notes/);
+  });
+});
+
+describe("AC18: MAP phase references build-system-map tool", () => {
+  it("body references build-system-map in MAP phase", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/build-system-map/);
+  });
+});
+
+describe("AC19: HUNT phase references derive-hotspots tool", () => {
+  it("body references derive-hotspots in HUNT phase", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/derive-hotspots/);
+  });
+});
+
+describe("AC20: ATTACK phase references generate-foundry-poc tool", () => {
+  it("body references generate-foundry-poc in ATTACK phase", () => {
+    const body = extractBody(readSkill());
+    expect(body).toMatch(/generate-foundry-poc/);
+  });
+});
