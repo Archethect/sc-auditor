@@ -5,7 +5,7 @@
  * Uses the static normalization layer for category and confidence mapping.
  */
 
-import { normalizeConfidence, normalizeDetectorCategory } from "../../core/static-normalizer.js";
+import { normalizeConfidence, normalizeDetectorCategory } from "./parser-utils.js";
 import type {
   Finding,
   FindingConfidence,

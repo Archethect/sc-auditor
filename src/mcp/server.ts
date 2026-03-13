@@ -12,7 +12,7 @@ import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
 const SERVER_NAME = "sc-auditor";
-const SERVER_VERSION = "0.3.0";
+const SERVER_VERSION = "2.0.0";
 
 /**
  * Creates and configures the MCP server.

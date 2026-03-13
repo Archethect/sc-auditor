@@ -1,14 +1,14 @@
 # sc-auditor
 
-Smart contract security auditor for Claude Code and Codex CLI — static analysis, Solodit findings search, Cyfrin checklist, and interactive Map-Hunt-Attack methodology.
+Your AI-powered smart contract security co-pilot for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and [Codex CLI](https://github.com/openai/codex).
 
-**Version:** 0.3.0 | **Author:** [Archethect](https://github.com/Archethect)
-
-A [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and [Codex CLI](https://github.com/openai/codex) plugin providing four MCP tools and an interactive audit skill for systematic vulnerability discovery.
+**Version:** 2.0.0 | **Author:** [Archethect](https://github.com/Archethect)
 
 ## Table of Contents
 
 - [Overview](#overview)
+- [What's New in v2.0.0](#whats-new-in-v200)
+- [How It Works](#how-it-works)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Configuration](#configuration)
@@ -19,94 +19,100 @@ A [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and [Codex CLI](
 - [Audit Methodology](#audit-methodology)
 - [Troubleshooting](#troubleshooting)
 - [Development](#development)
-- [Contributing](#contributing)
+- [Credits](#credits)
 - [License](#license)
 
 ## Overview
 
-Integrates Slither, Aderyn, the Cyfrin audit checklist, and Solodit findings search into your Claude Code workflow.
+sc-auditor turns your AI coding assistant into a security auditor. Point it at a Solidity codebase and it will map the architecture, dispatch six parallel agents to hunt for bugs across different vulnerability classes, then verify every finding through a Devil's Advocate pipeline that demands proof before confirmation.
 
-The plugin provides two usage modes:
+Under the hood: static analysis (Slither, Aderyn), real-world vulnerability intelligence (Solodit), fuzz testing (Echidna, Medusa), symbolic execution (Halmos), and a rigorous Map-Hunt-Attack methodology — all orchestrated through prompt-driven multi-agent pipelines.
 
-1. **Interactive Audit Skill** (`/security-auditor`) — guides you through a structured SETUP-MAP-HUNT-ATTACK methodology for comprehensive smart contract auditing.
-2. **Individual MCP Tools** — four tools you can invoke directly for ad-hoc analysis without running a full audit.
+1. **Interactive Audit Skill** (`/security-auditor`) — a structured multi-phase pipeline with parallel agent lanes for systematic vulnerability discovery.
+2. **Individual MCP Tools** — eight tools you can invoke directly for ad-hoc analysis.
 
-### Features
+## What's New in v2.0.0
 
-- Run **Slither** static analysis on Solidity projects
-- Run **Aderyn** static analysis on Solidity projects
-- Search **Solodit** for real-world security findings by keyword, severity, and tags
-- Load the **Cyfrin audit checklist** with category filtering
-- Interactive **Map-Hunt-Attack** audit methodology with structured finding output
+v2.0.0 is a ground-up rearchitecture. The hardcoded audit pipeline has been replaced with a **prompt-driven multi-agent orchestration model** — every phase is now executed by specialized sub-agents dispatched in parallel, with structured checkpoints for crash recovery and context-window resilience.
+
+**Parallel Hunt Lanes** — Six specialized agents hunt simultaneously, each targeting a distinct vulnerability class: callback liveness, accounting/entitlement, semantic consistency, token/oracle statefulness, economic differentials, and an auto-triggered adversarial deep lane for cross-contract attack paths. Inspired by [@pashov](https://github.com/pashov)'s structured agent lane methodology and adversarial verification approach.
+
+**Devil's Advocate Verification Pipeline** — Every finding goes through a formal 6-dimension DA evaluation during ATTACK, then an independent skeptic (VERIFY) tries to break it with inversion mandate. Conflicts are resolved by a proof-based judge: "prove it or lose it."
+
+**Proof-or-Demote** — ATTACK agents must attempt at least one proof method (Foundry PoC, Echidna, Medusa, Halmos) for confirmed vulnerabilities. In benchmark mode, unproven HIGH/MEDIUM findings are automatically demoted.
+
+**Checkpoint Discipline** — Agents self-checkpoint after every phase. The orchestrator can resume from any phase after crashes, context compaction, or session interruptions.
+
+**Expanded Tool Suite** — Eight MCP tools: Slither, Aderyn, Solodit search, Cyfrin checklist, Foundry PoC generation, Echidna fuzzing, Medusa fuzzing, and Halmos symbolic execution.
+
+## How It Works
+
+```
+                    /security-auditor src/
+                           |
+              SETUP -----> MAP -----> HUNT -----> ATTACK -----> VERIFY -----> REPORT
+           (1 agent)   (1 agent)  (5-6 agents)  (N agents)   (N agents)
+                                    parallel      parallel     parallel
+                                       |
+                  +--------------------+--------------------+
+                  |          |         |         |          |
+              Callback  Accounting  Semantic  Token/    Economic
+              Liveness  Entitlement Consist.  Oracle    Differ.
+                  |          |         |         |          |
+                  +----+-----+---------+----+----+----------+
+                       |                    |
+                  Adversarial Deep     (auto-trigger)
+                  (cross-contract)
+```
+
+Each HUNT lane produces prioritized hotspots. You pick which ones to deep-dive. ATTACK agents trace call paths, run the Devil's Advocate protocol, construct exploit sketches, and generate proofs. VERIFY agents independently challenge every finding with an inversion mandate. A judge resolves conflicts.
 
 ## Prerequisites
 
 ### Required
 
-- **Node.js >= 22** — Download from [nodejs.org](https://nodejs.org/).
-- **npm** — Included with Node.js.
-- **Claude Code CLI** — Required runtime. See [Claude Code documentation](https://docs.anthropic.com/en/docs/claude-code) for installation.
-- **Codex CLI** (alternative) — Works as an alternative to Claude Code. See [Codex CLI documentation](https://github.com/openai/codex) for installation.
-- **Solodit API Key** — Required for the `search_findings` tool. To get one:
+- **Node.js >= 22** — Download from [nodejs.org](https://nodejs.org/)
+- **Claude Code CLI** or **Codex CLI** — See [Claude Code docs](https://docs.anthropic.com/en/docs/claude-code) or [Codex docs](https://github.com/openai/codex)
+- **Solodit API Key** — Required for the `search_findings` tool:
   1. Go to [solodit.cyfrin.io](https://solodit.cyfrin.io)
-  2. Create an account or sign in
-  3. Click the dropdown menu in the top-right corner
-  4. Select **API Keys**
-  5. Generate a new API key
-  6. Copy and save it — you will need it for `config.json`
+  2. Sign in > dropdown menu (top-right) > **API Keys**
+  3. Generate and save your key
 
 ### Optional (Recommended)
 
-- **Slither** — Python-based static analysis for Solidity. Install:
+- **Slither** + **solc** — Static analysis:
 
   ```bash
-  pip install slither-analyzer
+  pip install slither-analyzer solc-select
+  solc-select install 0.8.20 && solc-select use 0.8.20
   ```
 
-  Slither also requires `solc` (the Solidity compiler).
+  Match `solc` version to your contracts' `pragma solidity` statement.
 
-- **solc (Solidity compiler)** — Required by Slither. Install via `solc-select`:
-
-  ```bash
-  pip install solc-select
-  solc-select install 0.8.20
-  solc-select use 0.8.20
-  ```
-
-  Match the `solc` version to your contracts' `pragma solidity` statement.
-
-- **Aderyn** — Rust-based static analysis for Solidity. Install:
+- **Aderyn** — Rust-based static analysis:
 
   ```bash
   cargo install aderyn
   ```
 
-> The plugin works without Slither and Aderyn — you will still have checklist, Solodit search, and manual audit capabilities. Static analysis tools enhance the audit with automated findings.
+- **Foundry** — For PoC generation and forge tests: [getfoundry.sh](https://getfoundry.sh/)
+
+- **Echidna** / **Medusa** / **Halmos** — Fuzz testing and symbolic execution (see their respective docs)
+
+> The plugin works without external tools — you'll still have Solodit search, the Cyfrin checklist, and the full Map-Hunt-Attack methodology. Static analysis and proof tools enhance the audit with automated findings and executable proofs.
 
 ## Installation
 
-1. **Clone the repository:**
+### Claude Code
+
+1. **Clone and build:**
 
    ```bash
    git clone https://github.com/Archethect/sc-auditor.git
-   cd sc-auditor
+   cd sc-auditor && npm install && npm run build
    ```
 
-2. **Install dependencies:**
-
-   ```bash
-   npm install
-   ```
-
-3. **Build:**
-
-   ```bash
-   npm run build
-   ```
-
-4. **Register the plugin in Claude Code:**
-
-   Add the following to your project's `.mcp.json` or Claude Code settings:
+2. **Register the plugin** — add to your project's `.mcp.json` or Claude Code settings:
 
    ```json
    {
@@ -120,300 +126,273 @@ The plugin provides two usage modes:
    }
    ```
 
-   Replace `/path/to/sc-auditor` with the actual path to your cloned repository.
+   If installed as a Claude Code plugin, the path resolves automatically.
 
-   If installed as a Claude Code plugin, the path is resolved automatically via `${CLAUDE_PLUGIN_ROOT}/dist/mcp/server.js`.
-
-### Codex CLI Installation
-
-If using Codex CLI instead of Claude Code:
-
-```bash
-# Via npx (recommended)
-codex mcp add sc-auditor -- npx -y sc-auditor
-
-# Or from source
-codex mcp add sc-auditor -- node /path/to/sc-auditor/dist/mcp/main.js
-```
-
-See [docs/codex-setup.md](docs/codex-setup.md) for detailed Codex setup instructions.
-
-5. **Set your Solodit API key:**
+3. **Set your Solodit API key:**
 
    ```bash
    export SOLODIT_API_KEY="your-key-here"
    ```
 
-   Or create a `.env` file in your Solidity project root with `SOLODIT_API_KEY=your-key-here`.
+### Codex CLI
 
-   Optionally, copy `config.example.json` to customize non-secret settings:
+> **Required:** Enable `multi_agent = true` in your Codex `config.toml`. Without it, HUNT/ATTACK/VERIFY phases run sequentially instead of in parallel — audits take 3-5x longer.
 
-   ```bash
-   cp /path/to/sc-auditor/config.example.json config.json
-   ```
+```bash
+# Via npx
+codex mcp add sc-auditor -- npx -y sc-auditor
+```
+
+```toml
+# In your Codex config.toml
+[agent]
+multi_agent = true
+```
+
+See [docs/codex-setup.md](docs/codex-setup.md) for detailed Codex setup, skill installation, and troubleshooting.
 
 ## Configuration
 
-sc-auditor reads configuration from a `config.json` file in the root of the Solidity project being audited. The path can be overridden with the `SC_AUDITOR_CONFIG` environment variable.
+sc-auditor reads optional configuration from `config.json` in the Solidity project root. Override the path with `SC_AUDITOR_CONFIG` env var. All fields are optional — sensible defaults are applied.
 
-### Minimal Configuration
-
-All fields are optional — sensible defaults are used when omitted. The API key for Solodit is loaded from the `SOLODIT_API_KEY` environment variable (see [Environment Variables](#environment-variables)).
+### Minimal Setup
 
 ```json
 {}
 ```
 
-An empty config.json (or no config.json at all) is valid — all settings have defaults.
+An empty `config.json` (or no config file) is valid.
 
-### Full Configuration Reference
+### Configuration Reference
 
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `default_severity` | string[] | No | `["CRITICAL", "HIGH", "MEDIUM"]` | Severity levels to include. Valid values: `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, `GAS`, `INFORMATIONAL` |
-| `default_quality_score` | integer | No | `2` | Minimum quality score for Solodit results (1-5) |
-| `report_output_dir` | string | No | `"audits"` | Directory for audit reports. Must be a relative path, no `..` traversal |
-| `max_findings_per_category` | integer | No | `10` | Maximum findings per category (1-1000) |
-| `max_deep_dives` | integer | No | `5` | Maximum deep dive analyses (1-100) |
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `default_severity` | string[] | `["CRITICAL","HIGH","MEDIUM"]` | Severity filter. Valid: `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, `GAS`, `INFORMATIONAL` |
+| `default_quality_score` | integer | `2` | Min Solodit quality score (1-5) |
+| `report_output_dir` | string | `"audits"` | Report output directory (relative, no `..`) |
+| `max_findings_per_category` | integer | `10` | Max findings per category (1-1000) |
+| `max_deep_dives` | integer | `5` | Max deep-dive analyses (1-100) |
 
-#### Static Analysis Configuration (`static_analysis`)
+#### Static Analysis (`static_analysis`)
 
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `slither_enabled` | boolean | No | `true` | Whether to run Slither |
-| `slither_path` | string | No | `"slither"` | Path to Slither binary |
-| `aderyn_enabled` | boolean | No | `true` | Whether to run Aderyn |
-| `aderyn_path` | string | No | `"aderyn"` | Path to Aderyn binary |
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `slither_enabled` | boolean | `true` | Run Slither |
+| `slither_path` | string | `"slither"` | Path to Slither binary |
+| `aderyn_enabled` | boolean | `true` | Run Aderyn |
+| `aderyn_path` | string | `"aderyn"` | Path to Aderyn binary |
 
-#### LLM Reasoning Configuration (`llm_reasoning`)
+#### LLM Reasoning (`llm_reasoning`)
 
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `max_functions_per_category` | integer | No | `50` | Max functions to analyze per category (1-500) |
-| `context_window_budget` | number | No | `0.7` | Fraction of context window to use (0.1-1.0) |
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `max_functions_per_category` | integer | `50` | Max functions per category (1-500) |
+| `context_window_budget` | number | `0.7` | Context window fraction (0.1-1.0) |
 
-#### Workflow Configuration (`workflow`)
+#### Workflow (`workflow`)
 
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `mode` | string | No | `"default"` | Workflow mode: `default`, `deep`, or `benchmark` |
-| `parallel_hunters` | boolean | No | `false` | Whether to run hunter agents in parallel |
-| `autonomous` | boolean | No | `false` | Whether the audit runs autonomously without user prompts |
-| `require_witness_for_high` | boolean | No | `false` | Whether high-severity findings require a witness/PoC |
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `mode` | string | `"default"` | `default`, `deep`, or `benchmark` |
+| `parallel_hunters` | boolean | `false` | Run HUNT lanes in parallel |
+| `autonomous` | boolean | `false` | Skip user confirmation gates |
+| `require_witness_for_high` | boolean | `false` | Require PoC for HIGH findings |
 
 **Workflow Modes:**
 
-- **`default`** -- Standard audit workflow with MAP-HUNT-ATTACK phases. Suitable for most audits.
-- **`deep`** -- Extended analysis with more thorough coverage. Runs additional passes and cross-references more sources.
-- **`benchmark`** -- Strict mode for competitive audits. Applies gating rules: unproven medium/high findings are demoted to informational. Report splits findings into Scored Findings (verified with proof) and Research Candidates (unverified).
+- **`default`** — Standard Map-Hunt-Attack with user review gates.
+- **`deep`** — Extended coverage with additional analysis passes.
+- **`benchmark`** — Competitive audit mode. Unproven HIGH/MEDIUM findings are demoted. Report splits into Scored Findings (with proof) and Research Candidates (without).
 
-#### Proof Tools Configuration (`proof_tools`)
+#### Proof Tools (`proof_tools`)
 
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `foundry_enabled` | boolean | No | `true` | Whether Foundry is available for PoC generation |
-| `echidna_enabled` | boolean | No | `false` | Whether Echidna is available for fuzzing |
-| `medusa_enabled` | boolean | No | `false` | Whether Medusa is available for fuzzing |
-| `halmos_enabled` | boolean | No | `false` | Whether Halmos is available for symbolic execution |
-| `ityfuzz_enabled` | boolean | No | `false` | Whether ItyFuzz is available for fuzzing |
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `foundry_enabled` | boolean | `true` | Foundry PoC generation |
+| `echidna_enabled` | boolean | `false` | Echidna fuzz testing |
+| `medusa_enabled` | boolean | `false` | Medusa fuzz testing |
+| `halmos_enabled` | boolean | `false` | Halmos symbolic execution |
+| `ityfuzz_enabled` | boolean | `false` | ItyFuzz fuzzing |
 
-#### Verification Configuration (`verify`)
+#### Verification (`verify`)
 
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `demote_unproven_medium_high` | boolean | No | `false` (`true` in benchmark mode) | Whether to demote unproven medium/high findings to informational |
-
-### Report Split
-
-In **benchmark mode**, the final report is split into two sections:
-
-1. **Scored Findings** -- Verified findings with proof (PoC, fuzzer witness, or symbolic execution result). These are the findings submitted for scoring.
-2. **Research Candidates** -- Findings that passed the skeptic review but lack formal proof. These are informational and not scored.
-
-### Benchmark Gating Rules
-
-When `workflow.mode` is `"benchmark"`:
-
-- `verify.demote_unproven_medium_high` defaults to `true` (can be overridden to `false`)
-- Medium and high severity findings without a witness/PoC are automatically demoted to informational
-- The report clearly separates scored findings from research candidates
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `demote_unproven_medium_high` | boolean | `false` (`true` in benchmark) | Demote unproven HIGH/MEDIUM to informational |
 
 ### Environment Variables
 
 | Variable | Description |
 |----------|-------------|
-| `SC_AUDITOR_CONFIG` | Override the `config.json` file path |
-| `SOLODIT_API_KEY` | **Required.** API key for Solodit findings search. Set via environment or `.env` file |
-
-### Full Example
-
-```json
-{
-  "default_severity": ["CRITICAL", "HIGH", "MEDIUM"],
-  "default_quality_score": 2,
-  "report_output_dir": "audits",
-  "max_findings_per_category": 10,
-  "max_deep_dives": 5,
-  "static_analysis": {
-    "slither_enabled": true,
-    "slither_path": "slither",
-    "aderyn_enabled": true,
-    "aderyn_path": "aderyn"
-  },
-  "llm_reasoning": {
-    "max_functions_per_category": 50,
-    "context_window_budget": 0.7
-  },
-  "workflow": {
-    "mode": "default",
-    "parallel_hunters": false,
-    "autonomous": false,
-    "require_witness_for_high": false
-  },
-  "proof_tools": {
-    "foundry_enabled": true,
-    "echidna_enabled": false,
-    "medusa_enabled": false,
-    "halmos_enabled": false,
-    "ityfuzz_enabled": false
-  },
-  "verify": {
-    "demote_unproven_medium_high": false
-  }
-}
-```
+| `SOLODIT_API_KEY` | **Required.** Solodit API key (env var or `.env` file) |
+| `SC_AUDITOR_CONFIG` | Override config.json path |
 
 ## Quick Start
 
-1. Ensure prerequisites are installed (Node.js >= 22, Claude Code, Solodit API key).
-2. Install and build the plugin (see [Installation](#installation)).
-3. Set your Solodit API key:
+```bash
+# 1. Set your API key
+export SOLODIT_API_KEY="sk_your_key_here"
 
-   ```bash
-   export SOLODIT_API_KEY="sk_your_key_here"
-   ```
+# 2. Open Claude Code in your Solidity project
+cd my-defi-protocol
 
-   Or create a `.env` file in your project root with `SOLODIT_API_KEY=sk_your_key_here`.
+# 3. Launch the audit
+/security-auditor src/
+```
 
-4. Open Claude Code in your Solidity project directory.
-5. Run the interactive audit:
+The plugin runs static analysis, builds a system map of your contracts, then dispatches parallel hunt agents to find vulnerabilities. You review the map, pick hotspots to attack, and get verified findings with proofs.
 
-   ```
-   /security-auditor src/contracts/
-   ```
+You can also point it at a GitHub repo:
 
-6. The plugin automatically runs static analysis (if tools are installed), builds a system map, then guides you through interactive hunting and attack phases.
+```
+/security-auditor https://github.com/example/vault-protocol
+```
+
+Or specific files:
+
+```
+/security-auditor src/Vault.sol,src/Strategy.sol
+```
 
 ## Usage
 
 ### Interactive Audit (`/security-auditor`)
 
-The primary usage mode. Invoke with `/security-auditor <target>` where `<target>` is a Solidity file or directory.
+The primary mode. Runs you through the full Map-Hunt-Attack pipeline:
 
-```
-/security-auditor src/contracts/
-```
+#### Phase 0: Resume Check
 
-The audit follows four phases:
+Checks for existing audit state in `.sc-auditor-work/checkpoints/`. If found, offers to resume from the last completed phase — no work lost.
 
-#### Phase 1: SETUP (Automated)
+#### Phase 0.5: Resolve Input
 
-- Automatically runs Slither and Aderyn on the target (if installed)
-- Loads the Cyfrin audit checklist
-- Presents a summary of static analysis findings by severity
+Resolves your input (local path, GitHub URL, or specific files) into a project root. Detects the framework (Foundry/Hardhat) and scopes the audit.
 
-#### Phase 2: MAP (Interactive)
+#### Phase 1: SETUP (1 agent)
 
-- Reads all Solidity files in scope
-- Builds a comprehensive system map: components, invariants, static analysis summary
-- Presents the map for review — you can correct or add to it before proceeding
+Runs Slither and Aderyn (if installed), loads the Cyfrin checklist, discovers all Solidity files. Returns a summary of findings by severity.
 
-#### Phase 3: HUNT (Interactive)
+#### Phase 2: MAP (1 agent)
 
-- Systematically analyzes each public/external state-changing function
-- Cross-references with checklist items, Solodit findings, built-in risk patterns, and invariants from MAP phase
-- Identifies suspicious spots with supporting evidence
-- Presents a ranked list of spots for you to select attack targets
+Reads all contracts and builds a comprehensive **SystemMapArtifact**: components, inheritance trees, external surfaces, auth surfaces, state variables, write sites, call sites, value flow edges, config semantics, protocol invariants, and audit units. You review and correct the map before proceeding.
 
-#### Phase 4: ATTACK (Interactive)
+#### Phase 3: HUNT (5-6 parallel agents)
 
-- Deep dives into each selected spot
-- Traces call paths and constructs attack narratives
-- Applies the Devil's Advocate protocol to verify findings
-- Outputs structured findings with severity, evidence, and remediation
+Six specialized lanes hunt simultaneously:
+
+| Lane | What It Finds |
+|------|---------------|
+| **Callback Liveness** | Reentrancy, griefing, honeypots, withdrawal blockage, user-controlled callbacks |
+| **Accounting Entitlement** | Stale balance reads, transfer/burn entitlement drift, reward attribution bugs, fee capture on outdated state |
+| **Semantic Consistency** | Config unit mismatches (percent vs basis-point vs divisor), copied formulas with changed semantics, magic numbers, decimal scaling errors |
+| **Token Oracle Statefulness** | Approval abuse, fee-on-transfer/rebasing token assumptions, oracle staleness and manipulation, multi-transaction state assumptions |
+| **Economic Differential** | Symmetric operation asymmetries (deposit vs withdraw), temporal rate drift, boundary behavior (zero/max/dust/first-deposit), fee compounding, incentive misalignment |
+| **Adversarial Deep** | Cross-lane hotspot chaining, flash loan amplification, governance/timelock exploitation, sandwich/oracle cascades *(auto-triggers when cross-contract patterns detected)* |
+
+Each lane applies graduated hard-negative handling — safe patterns are annotated and deprioritized, not dismissed. You pick which hotspots to deep-dive.
+
+#### Phase 4: ATTACK (N parallel agents)
+
+One agent per hotspot. Each agent:
+1. Traces the full call path (entry → branches → mutations → exit)
+2. Runs the **Devil's Advocate protocol** first (6 dimensions: guards, reentrancy protection, access control, by-design classification, economic feasibility, dry run)
+3. Constructs an exploit sketch with tx sequence, state deltas, and numeric example
+4. Generates proof (Foundry PoC, Echidna, Medusa, or Halmos)
+5. Corroborates with Solodit precedents
+
+#### Phase 5: VERIFY (N parallel agents)
+
+Independent skeptics challenge every finding with an **inversion mandate**:
+- If ATTACK confirmed it → skeptic tries to **negate** (find missed guards)
+- If ATTACK invalidated it → skeptic tries to **resurrect** (prove guards don't actually block)
+
+A judge resolves conflicts with the "prove it or lose it" protocol.
+
+#### Phase 5.5: Conflict Resolution
+
+RE-ATTACK agents are dispatched for resurrected findings that need a working exploit proof.
+
+#### Phase 6: Report
+
+Final structured report with five sections:
+1. **Proved Findings** — Verified with executable proof
+2. **Confirmed (Unproven)** — Strong evidence, no executable proof
+3. **Detected Candidates** — Plausible, not fully verified
+4. **Design Tradeoffs** — Intentional choices that accept risk
+5. **Discarded** — Ruled out, with DA chain reasoning
 
 ### Individual MCP Tools
 
-You can use the four MCP tools individually for ad-hoc analysis without running a full audit.
+Use any tool directly for ad-hoc analysis without running a full audit:
 
-#### `run-slither`
+#### Static Analysis
 
-Run Slither static analysis on a Solidity project.
+| Tool | Description | Input |
+|------|-------------|-------|
+| `run-slither` | Slither static analysis | `{ rootDir }` |
+| `run-aderyn` | Aderyn static analysis | `{ rootDir }` |
 
-- **Tool name:** `mcp__sc-auditor__run-slither`
-- **Input:** `{ "rootDir": "<path-to-solidity-project>" }`
-- **Output:** JSON with `success` flag and `findings` array (title, severity, confidence, source, category, affected files/lines, description, evidence sources).
-- **Example:** Ask Claude "Analyze my contracts with Slither" or invoke the tool directly.
+#### Intelligence
 
-#### `run-aderyn`
+| Tool | Description | Input |
+|------|-------------|-------|
+| `search_findings` | Search Solodit for real-world findings (rate limit: 20 requests per 60s) | `{ query, severity?, tags?, limit? }` |
+| `get_checklist` | Cyfrin audit checklist (cached locally for 24h) | `{ category? }` |
 
-Run Aderyn static analysis on a Solidity project.
+#### Proof Generation & Testing
 
-- **Tool name:** `mcp__sc-auditor__run-aderyn`
-- **Input:** `{ "rootDir": "<path-to-solidity-project>" }`
-- **Output:** Same structure as `run-slither`.
-- **Example:** Ask Claude "Run Aderyn on my contracts" or invoke the tool directly.
+| Tool | Description | Input |
+|------|-------------|-------|
+| `generate-foundry-poc` | Foundry PoC scaffold for a hotspot | `{ rootDir, hotspot }` |
+| `run-echidna` | Echidna fuzz testing | `{ rootDir, contractName?, configPath?, testLimit? }` |
+| `run-medusa` | Medusa fuzz testing | `{ rootDir, targetContract?, configPath?, timeout? }` |
+| `run-halmos` | Halmos symbolic execution | `{ rootDir, contractName?, functionName?, loopBound? }` |
 
-#### `get_checklist`
+**Examples:**
 
-Get the Cyfrin audit checklist. Results are cached locally for 24 hours at `~/.sc-auditor/checklist.json`.
-
-- **Tool name:** `mcp__sc-auditor__get_checklist`
-- **Input:** `{ "category": "<optional-category-filter>" }` — category is a case-insensitive substring match
-- **Output:** Array of checklist items, each with: id, category, question, description, remediation, references, tags.
-- **Example:** Ask Claude "Get reentrancy checklist items" or invoke with `{ "category": "Reentrancy" }`.
-
-#### `search_findings`
-
-Search Solodit for real-world security findings. Requires a Solodit API key.
-
-- **Tool name:** `mcp__sc-auditor__search_findings`
-- **Input:**
-  - `query` (string, required): Search keywords
-  - `severity` (string, optional): `Critical`, `High`, `Medium`, `Low`, `Gas`, or `Informational`
-  - `tags` (string[], optional): Tag filters, e.g. `["Reentrancy", "Oracle"]`
-  - `limit` (integer, optional): Number of results, 1-100, default 10
-- **Output:** Array of results, each with: slug, title, severity, tags, protocol_category, quality_score.
-- **Rate limit:** 20 requests per 60 seconds. The tool warns when approaching the limit.
-- **Example:** Ask Claude "Search Solodit for flash loan reentrancy" or invoke with `{ "query": "flash loan reentrancy", "severity": "High" }`.
+```
+"Run Slither on my contracts"
+"Search Solodit for flash loan reentrancy findings"
+"Generate a Foundry PoC for this vulnerability"
+"Run Echidna fuzzing on src/Vault.sol"
+```
 
 ## Audit Methodology
 
-sc-auditor uses a structured **Map-Hunt-Attack** methodology inspired by professional audit workflows, ensuring systematic coverage and reducing false positives through hypothesis-driven analysis.
-
 ### Core Principles
 
-1. **Hypothesis-Driven Analysis** — Every potential issue is treated as a hypothesis to falsify. The auditor seeks evidence both for and against each finding.
+1. **Hypothesis-Driven** — Every issue is a hypothesis to falsify, not a conclusion to confirm.
+2. **Cross-Reference Mandate** — Validate against multiple sources: static analysis, checklist, Solodit precedents, manual review.
+3. **Devil's Advocate Protocol** — A formal 6-dimension evaluation (guards, reentrancy protection, access control, by-design classification, economic feasibility, dry run) with scoring from -3 (full mitigation) to +1 (edge-case exploitable). Decision thresholds determine verdicts: invalidated, degraded, sustained, or escalated.
+4. **Evidence Required** — Concrete line references, code paths, and at least one supporting source.
+5. **Privileged Roles Honest** — Admins act in good faith. But authority propagation, composition failures, flash-loan governance, and config interaction vectors are NOT dismissed.
+6. **Graduated Hard-Negative Handling** — Safe patterns (reentrancy guards, pull-over-push, gas-limited callbacks) are annotated and deprioritized, never silently dismissed.
 
-2. **Cross-Reference Mandate** — Findings are validated against multiple sources: static analysis output, checklist items, Solodit real-world examples, and manual code review.
+### Solodit Usage (Graduated by Phase)
 
-3. **Devil's Advocate Protocol** — Before confirming a vulnerability, the auditor searches for reasons it is NOT exploitable: mitigating controls, access restrictions, value constraints, or protocol invariants.
+Solodit is a corroboration tool, not a discovery tool:
 
-4. **Evidence Required** — Every finding must cite concrete evidence: line references, code paths, and supporting sources (static analysis detectors, checklist item IDs, or Solodit finding slugs).
+| Phase | Policy |
+|-------|--------|
+| SETUP / MAP | **Blocked** — no `search_findings` calls |
+| HUNT | Only after establishing a local anchor (contract + function + bug family from code) |
+| ATTACK | For corroboration of already-identified attack paths |
+| VERIFY | To strengthen or weaken evidence |
+| REPORT | **Blocked** |
 
-5. **Privileged Roles Honest** — Owner/admin assumed honest. Focus on unprivileged attacker vectors.
+### Finding Lifecycle
 
-### Finding Output
+```
+Hotspot (HUNT) → candidate (ATTACK) → verified / judge_confirmed / discarded (VERIFY)
+                     ↓
+              invalidated_by_attack (if DA kills it early)
+```
 
-Confirmed findings include:
+### Finding Severity & Confidence
 
-- **Severity:** Critical, High, Medium, Low, Gas, or Informational
-- **Confidence:** Confirmed, Likely, or Possible
-- **Affected files and line ranges**
-- **Description** with code path explanation
-- **Evidence sources** (static analysis detectors, checklist items, Solodit examples)
-- **Remediation** suggestions
-- **Attack scenario** (when applicable)
+- **Severity:** Critical, High, Medium, Low, Gas, Informational
+- **Confidence:** Confirmed (with proof), Likely (strong evidence), Possible (plausible hypothesis)
+- **Proof types:** Foundry PoC, Echidna, Medusa, Halmos, ItyFuzz, or none
 
 ## Troubleshooting
 
@@ -421,83 +400,84 @@ Confirmed findings include:
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| `CONFIG_MISSING` | No `config.json` found | config.json is optional. If using `SC_AUDITOR_CONFIG`, ensure the path is correct |
-| `CONFIG_PARSE_ERROR` | `config.json` is not valid JSON | Check for syntax errors (trailing commas, missing quotes) |
-| `CONFIG_VALIDATION` | A config field has an invalid value | Check field types and ranges in the [Configuration Reference](#full-configuration-reference) |
+| `CONFIG_MISSING` | No config.json | Optional — create one or use `SC_AUDITOR_CONFIG` |
+| `CONFIG_PARSE_ERROR` | Invalid JSON | Fix syntax (trailing commas, missing quotes) |
+| `CONFIG_VALIDATION` | Invalid field value | Check types and ranges in [Configuration Reference](#configuration-reference) |
 
 ### Static Analysis Errors
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| `TOOL_NOT_FOUND` | Slither or Aderyn not installed | Install: `pip install slither-analyzer` or `cargo install aderyn` |
-| `COMPILATION_FAILED` | Solidity compilation failed | Check that `solc` version matches your contracts' `pragma`. Use `solc-select` to switch versions. |
-| `EXECUTION_TIMEOUT` | Analysis took too long | Try analyzing a smaller scope or individual files |
+| `TOOL_NOT_FOUND` | Slither/Aderyn not installed | `pip install slither-analyzer` or `cargo install aderyn` |
+| `COMPILATION_FAILED` | solc version mismatch | `solc-select install X.Y.Z && solc-select use X.Y.Z` |
+| `EXECUTION_TIMEOUT` | Large project | Narrow scope or increase timeout |
 
 ### Solodit API Errors
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| `SOLODIT_AUTH` | Invalid or expired API key | Regenerate your key at [solodit.cyfrin.io](https://solodit.cyfrin.io) > API Keys |
-| `SOLODIT_RATE_LIMIT` | Too many requests (> 20 per 60 seconds) | Wait for the rate limit window to reset |
-| `SOLODIT_NETWORK` | Network connectivity issue | Check your internet connection |
+| `SOLODIT_AUTH` | Invalid API key | Regenerate at [solodit.cyfrin.io](https://solodit.cyfrin.io) > API Keys |
+| `SOLODIT_RATE_LIMIT` | >20 requests / 60s | Wait for reset |
+| `SOLODIT_NETWORK` | Connectivity | Check internet connection |
 
 ### Common Issues
 
-- **Plugin not showing** — Verify the path in `.mcp.json` points to `dist/mcp/server.js`. Run `npm run build` first.
-- **Static analysis skipped** — Slither or Aderyn not installed. Install them for enhanced analysis.
-- **Wrong solc version** — Use `solc-select list` to see installed versions, `solc-select install X.Y.Z` and `solc-select use X.Y.Z` to switch.
+- **Plugin not showing** — Verify path in `.mcp.json` points to `dist/mcp/main.js`. Run `npm run build` first.
+- **Phases running sequentially** — Enable parallel agents in your Codex config (`multi_agent = true`).
+- **Wrong solc version** — `solc-select list` to see installed, `solc-select install X.Y.Z && solc-select use X.Y.Z`.
+- **Audit state corrupted** — Delete `.sc-auditor-work/` and restart.
 
 ## Development
-
-For contributors and developers:
 
 ### Build
 
 ```bash
-npm run build    # Compile TypeScript to dist/
+npm run build        # Compile TypeScript + generate .agents/ for Codex
 ```
 
 ### Test
 
 ```bash
-npm test         # Run tests (vitest)
+npm test             # Unit + integration tests (vitest)
 ```
 
-### Lint
+### Lint & Type Check
 
 ```bash
-npm run lint     # Lint with Biome
-```
-
-### Type Check
-
-```bash
-npm run typecheck  # TypeScript type checking
+npm run lint         # Biome linter
+npm run typecheck    # TypeScript validation
 ```
 
 ### Project Structure
 
 ```
-src/config/        Configuration loading and validation
-src/core/          Domain logic (Solidity discovery, severity)
-src/mcp/           MCP server, tool registration
-src/mcp/tools/     MCP tool implementations
-src/mcp/services/  Services (checklist fetching and caching)
-src/types/         Shared TypeScript types
-skills/            Interactive audit skill (SKILL.md)
-.agents/           Codex-compatible skill files
-tests/             Integration and smoke tests
-.claude-plugin/    Plugin manifest files
+src/config/          Configuration loading and validation
+src/core/            Solidity file discovery
+src/mcp/             MCP server and tool registration
+src/mcp/tools/       Tool implementations (executors + parsers)
+src/mcp/services/    Checklist fetching and caching
+src/types/           Shared TypeScript types
+skills/              Audit skill definition and agent prompts
+.agents/             Codex-compatible skill files (auto-generated)
+scripts/             Build scripts (skills/ -> .agents/ transformer)
+tests/               Integration and smoke tests
+.claude-plugin/      Plugin manifests
 ```
+
+## Credits
+
+- **Audit Lane Architecture** — The parallel hunt lane structure and adversarial deep verification approach were inspired by [@pashov](https://github.com/pashov)'s pioneering work on multi-agent security review methodologies. The concept of specialized agents hunting independently across vulnerability classes, then combining findings for adversarial cross-lane analysis, draws directly from his approach.
+- **Solodit & Cyfrin** — Real-world vulnerability intelligence and audit checklist via [Cyfrin](https://www.cyfrin.io/).
+- **Static Analysis** — [Slither](https://github.com/crytic/slither) by Trail of Bits, [Aderyn](https://github.com/Cyfrin/aderyn) by Cyfrin.
 
 ## Contributing
 
-Contributions are welcome. Please follow existing code conventions:
+Contributions welcome. Follow existing conventions:
 
-- Use conventional commits (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`)
-- Run `npm run lint && npm run typecheck && npm test` before submitting
+- Conventional commits (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`)
+- `npm run lint && npm run typecheck && npm test` before submitting
 - ESM imports with `.js` extensions
-- Co-locate tests next to source files in `__tests__/` directories
+- Co-locate tests in `__tests__/` directories
 
 ## License
 

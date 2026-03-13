@@ -1,33 +1,10 @@
 /**
  * Public type exports for sc-auditor.
+ *
+ * v0.4.0: Removed architecture.ts, hotspot.ts, verification.ts, metadata.ts
+ * (now prompt-driven). Added tools.ts consolidation.
  */
 
-export type {
-  AccessControlModel,
-  ArchitectureComponent,
-  ArchitectureSummary,
-  AuthSurface,
-  ConfigSemantic,
-  ConfigSemanticConflict,
-  ConfigSemanticUnit,
-  ExternalCall,
-  ExternalCallSite,
-  ExternalCallType,
-  FunctionSignature,
-  FunctionVisibility,
-  InvariantScope,
-  ProtocolInvariant,
-  ProtocolType,
-  RiskLevel,
-  StateMutability,
-  StateVariable,
-  StateWriteSite,
-  StateWriteType,
-  StaticSummary,
-  SystemMapArtifact,
-  ValueFlowEdge,
-  ValueFlowType,
-} from "./architecture.js";
 export type { ChecklistItem } from "./checklist.js";
 export type {
   Config,
@@ -40,9 +17,14 @@ export type {
   WorkflowMode,
 } from "./config.js";
 export type {
+  DaChain,
+  DaDimension,
+  DaMitigation,
+  DaResult,
   DetectorCategory,
   EvidenceSource,
   EvidenceSourceType,
+  ExploitSketch,
   Finding,
   FindingConfidence,
   FindingSeverity,
@@ -51,20 +33,7 @@ export type {
   LineRange,
   ProofType,
 } from "./finding.js";
-export type {
-  Hotspot,
-  HotspotEvidence,
-  HotspotLane,
-  HotspotPriority,
-} from "./hotspot.js";
-export type {
-  AuditRunMetadata,
-  KnownRuntimeEventType,
-  ReportStatus,
-  RuntimeEventType,
-  RuntimeLogEntry,
-} from "./metadata.js";
-export type { AuditScopeEntry, CategoryAuditSummary } from "./scope.js";
+export type { AuditScopeEntry, CategoryAuditSummary, RiskLevel } from "./scope.js";
 export type {
   SoloditFinding,
   SoloditSearchResult,
@@ -76,8 +45,3 @@ export type {
   ToolAvailability,
   ToolStatus,
 } from "./static-analysis.js";
-export type {
-  JudgeVerdict,
-  SkepticVerdict,
-  VerificationArtifact,
-} from "./verification.js";

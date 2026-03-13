@@ -1,6 +1,6 @@
 {
   "name": "sc-auditor",
-  "version": "0.3.0",
-  "description": "Smart contract security auditor with static analysis, Solodit findings search, Cyfrin checklist integration, and interactive Map-Hunt-Attack methodology",
+  "version": "2.0.0",
+  "description": "AI-powered smart contract security auditor with parallel hunt lanes, Devil's Advocate verification, static analysis (Slither, Aderyn), fuzz testing (Echidna, Medusa), symbolic execution (Halmos), Solodit intelligence, and interactive Map-Hunt-Attack methodology",
   "author": { "name": "Archethect" }
 }

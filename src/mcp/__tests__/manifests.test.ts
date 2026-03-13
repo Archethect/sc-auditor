@@ -94,8 +94,8 @@ describe("AC4: package.json main and version", () => {
     expect(PKG.main).toBe("dist/mcp/main.js");
   });
 
-  it('version is "0.3.0"', () => {
-    expect(PKG.version).toBe("0.3.0");
+  it('version is "2.0.0"', () => {
+    expect(PKG.version).toBe("2.0.0");
   });
 });
 
@@ -112,15 +112,14 @@ describe("AC5: CLAUDE.md documents tools and skills", () => {
   const content = readText("CLAUDE.md");
 
   const EXPECTED_TOOLS = [
-    "build-system-map",
-    "derive-hotspots",
     "generate-foundry-poc",
-    "get-finding",
     "get_checklist",
     "run-aderyn",
+    "run-echidna",
+    "run-halmos",
+    "run-medusa",
     "run-slither",
     "search_findings",
-    "verify-finding",
   ] as const;
 
   it("Tools Reference table lists exactly the expected tools", () => {

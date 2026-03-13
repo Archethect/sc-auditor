@@ -1,5 +1,5 @@
 /**
- * Schema validation tests for all 11 registered MCP tools.
+ * Schema validation tests for all 8 registered MCP tools.
  *
  * Verifies each tool has a description, input schema, and that
  * the schema accepts valid input and rejects invalid input.
@@ -11,8 +11,6 @@ import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createMcpServer } from "../../server.js";
-import { registerBuildSystemMapTool } from "../build-system-map.js";
-import { registerDeriveHotspotsTool } from "../derive-hotspots.js";
 import { registerGenerateFoundryPocTool } from "../generate-foundry-poc.js";
 import { registerGetChecklistTool } from "../get-checklist.js";
 import { registerRunAderynTool } from "../run-aderyn.js";
@@ -21,20 +19,16 @@ import { registerRunHalmosTool } from "../run-halmos.js";
 import { registerRunMedusaTool } from "../run-medusa.js";
 import { registerRunSlitherTool } from "../run-slither.js";
 import { registerSearchFindingsTool } from "../search-findings.js";
-import { registerVerifyFindingTool } from "../verify-finding.js";
 
 const EXPECTED_TOOLS = [
   "run-slither",
   "run-aderyn",
   "get_checklist",
   "search_findings",
-  "build-system-map",
-  "derive-hotspots",
   "generate-foundry-poc",
   "run-echidna",
   "run-medusa",
   "run-halmos",
-  "verify-finding",
 ] as const;
 
 let tools: Tool[];
@@ -63,8 +57,6 @@ beforeAll(async () => {
   const server = createMcpServer();
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
 
-  registerBuildSystemMapTool(server);
-  registerDeriveHotspotsTool(server);
   registerGenerateFoundryPocTool(server);
   registerRunSlitherTool(server);
   registerRunAderynTool(server);
@@ -73,7 +65,6 @@ beforeAll(async () => {
   registerRunHalmosTool(server);
   registerGetChecklistTool(server);
   registerSearchFindingsTool(server);
-  registerVerifyFindingTool(server);
 
   const client = new Client({ name: "schema-test-client", version: "0.0.1" });
   await server.connect(serverTransport);
@@ -91,9 +82,9 @@ afterAll(async () => {
   await cleanup();
 });
 
-describe("AC1: Server registers all 11 tools", () => {
-  it("registers exactly 11 tools", () => {
-    expect(tools).toHaveLength(11);
+describe("AC1: Server registers all 8 tools", () => {
+  it("registers exactly 8 tools", () => {
+    expect(tools).toHaveLength(8);
   });
 
   it("registers all expected tool names", () => {
@@ -137,13 +128,10 @@ describe("AC5: Tools with rootDir require it as string", () => {
   const toolsWithRootDir = [
     "run-slither",
     "run-aderyn",
-    "build-system-map",
-    "derive-hotspots",
     "generate-foundry-poc",
     "run-echidna",
     "run-medusa",
     "run-halmos",
-    "verify-finding",
   ];
 
   for (const toolName of toolsWithRootDir) {
@@ -188,28 +176,9 @@ describe("AC7: get_checklist has optional category parameter", () => {
   });
 });
 
-describe("AC8: verify-finding has finding and systemMap parameters", () => {
-  it("verify-finding schema has finding property", () => {
-    const props = getSchemaProps("verify-finding");
-    expect(props.finding).toBeDefined();
-  });
-
-  it("verify-finding schema has systemMap property", () => {
-    const props = getSchemaProps("verify-finding");
-    expect(props.systemMap).toBeDefined();
-  });
-});
-
 describe("AC9: generate-foundry-poc has hotspot parameter", () => {
   it("generate-foundry-poc schema has hotspot property", () => {
     const props = getSchemaProps("generate-foundry-poc");
     expect(props.hotspot).toBeDefined();
-  });
-});
-
-describe("AC10: derive-hotspots has optional mode parameter", () => {
-  it("derive-hotspots schema has mode property", () => {
-    const props = getSchemaProps("derive-hotspots");
-    expect(props.mode).toBeDefined();
   });
 });

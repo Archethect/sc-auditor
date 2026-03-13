@@ -1,4 +1,7 @@
-import type { RiskLevel } from "./architecture.js";
+/**
+ * Risk level classification for scope entries.
+ */
+export type RiskLevel = "High" | "Medium" | "Low";
 
 /**
  * An entry in the audit scope table (Appendix A).

@@ -1,6 +1,6 @@
 # SC-Auditor
 
-Smart contract security auditor plugin with static analysis, Solodit findings search, Cyfrin checklist integration, and interactive Map-Hunt-Attack methodology.
+Smart contract security auditor plugin (v2.0.0) with prompt-driven multi-agent orchestration. Each audit phase (MAP, HUNT, ATTACK, VERIFY) is executed by specialized sub-agents dispatched in parallel, with structured checkpoints for crash recovery. Provides static analysis (Slither, Aderyn), Solodit findings search, Cyfrin checklist integration, fuzz testing (Echidna, Medusa), symbolic execution (Halmos), and an interactive Map-Hunt-Attack methodology.
 
 ## Prerequisites
 
@@ -25,13 +25,12 @@ Tools are registered by their respective tool modules. The MCP server starts wit
 | Tool | Inputs | Output | Purpose |
 |:-----|:-------|:-------|:--------|
 | `search_findings` | `query` (string), `severity?` (enum), `tags?` (string[]), `limit?` (integer 1-100) | SoloditSearchResult[] | Search Solodit for real-world findings |
-| `get-finding` | `slug` (string) | SoloditFinding | Retrieve a single Solodit finding by slug |
-| `get_checklist` | (none) | ChecklistItem[] | Get Cyfrin audit checklist |
+| `get_checklist` | `category?` (string) | ChecklistItem[] | Get Cyfrin audit checklist (optional category filter) |
 | `run-slither` | `rootDir` (string) | SlitherExecutionResult | Execute Slither static analysis on a directory |
 | `run-aderyn` | `rootDir` (string) | AderynExecutionResult | Execute Aderyn static analysis on a directory |
-| `build-system-map` | `rootDir` (string) | SystemMapArtifact | Build a complete system map of the protocol architecture |
-| `derive-hotspots` | `rootDir` (string), `mode?` (WorkflowMode) | Hotspot[] | Derive prioritized hotspots from the system map |
-| `verify-finding` | `rootDir` (string), `finding` (Finding), `systemMap` (SystemMapArtifact) | VerificationArtifact | Verify a finding through the skeptic-judge pipeline |
+| `run-echidna` | `rootDir` (string) | EchidnaExecutionResult | Execute Echidna fuzz testing |
+| `run-medusa` | `rootDir` (string) | MedusaExecutionResult | Execute Medusa fuzz testing |
+| `run-halmos` | `rootDir` (string) | HalmosExecutionResult | Execute Halmos symbolic testing |
 | `generate-foundry-poc` | `rootDir` (string), `hotspot` (Hotspot) | scaffold metadata | Generate a Foundry PoC scaffold for a hotspot |
 
 ## Skills

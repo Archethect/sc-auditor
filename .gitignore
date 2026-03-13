@@ -41,3 +41,4 @@ tmp/
 # Generated
 docs/.codebase-map.json
 .ralpr/
+.agents/

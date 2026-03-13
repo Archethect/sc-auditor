@@ -6,12 +6,10 @@
  */
 
 import {
-  generateHotspotHint,
   normalizeConfidence,
   normalizeDetectorCategory,
-} from "../../core/static-normalizer.js";
+} from "./parser-utils.js";
 import type { Finding, FindingSeverity } from "../../types/finding.js";
-import type { HotspotLane } from "../../types/hotspot.js";
 
 /**
  * Aderyn instance structure from JSON output.
@@ -62,7 +60,6 @@ function issueToFinding(issue: AderynIssue, severity: FindingSeverity): Finding 
   const detectorName = issue.detector_name ?? "unknown-detector";
   const confidenceKey = SEVERITY_TO_CONFIDENCE_KEY[severity] ?? "low_issues";
   const category = normalizeDetectorCategory(detectorName, "aderyn");
-  const hotspotHint = generateHotspotHint(category, detectorName);
 
   return {
     title: issue.title ?? "unknown-issue",
@@ -85,8 +82,7 @@ function issueToFinding(issue: AderynIssue, severity: FindingSeverity): Finding 
     proof_type: "none",
     independence_count: 1,
     benchmark_mode_visible: true,
-    ...(hotspotHint !== null ? { hotspot_hint: hotspotHint } : {}),
-  } as Finding & { hotspot_hint?: HotspotLane };
+  };
 }
 
 /**

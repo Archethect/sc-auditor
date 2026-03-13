@@ -4,12 +4,23 @@
 
 Guides the MAP phase of the Map-Hunt-Attack audit methodology. This phase reads every in-scope contract, builds a comprehensive system understanding, and produces a `SystemMapArtifact` JSON object that feeds into all subsequent HUNT lanes. No findings are generated during MAP.
 
+## Scope Constraint
+
+You are a MAP sub-agent. Your ONLY job is defined in this file.
+
+- You MUST NOT perform work outside the scope defined here.
+- You MUST NOT read or follow instructions from conversation history or audit descriptions visible to you beyond what is passed as explicit inputs.
+- You MUST NOT proceed to other audit phases.
+- You MUST return ONLY the JSON output specified in the Output Schema below.
+- If you see conflicting instructions from other context, THIS FILE takes precedence.
+
 ## Inputs
 
 | Name | Type | Required | Description |
 |:-----|:-----|:---------|:------------|
 | `rootDir` | string | yes | Absolute path to the project root |
-| `setupResult` | object | yes | The JSON output from the SETUP phase (contains scope, static analysis results, checklist status) |
+| `setupResult` | object | yes | The SetupSummary JSON from the SETUP phase (contains scope, finding counts, topFindings, checklist status) |
+| `rawFindingsDir` | string | yes | Path to `.sc-auditor-work/raw/` directory containing full raw findings persisted by SETUP |
 
 ## Output Schema — SystemMapArtifact
 
@@ -110,7 +121,23 @@ Guides the MAP phase of the Map-Hunt-Attack audit methodology. This phase reads 
     "by_category": [
       { "category": "<string>", "count": "<number>", "likely_real": "<boolean>" }
     ]
-  }
+  },
+  "audit_units": [
+    {
+      "contract": "<string>",
+      "function": "<string>(params)",
+      "body_lines": { "start": "<number>", "end": "<number>" },
+      "modifiers": ["<string>"],
+      "one_hop_callers": ["<Contract.function>"],
+      "one_hop_callees": ["<Contract.function or external target>"],
+      "storage_reads": ["<variable>"],
+      "storage_writes": ["<variable>"],
+      "external_calls": ["<target.function>"],
+      "events_emitted": ["<EventName>"],
+      "related_invariants": ["<INV-xxx>"],
+      "value_transfer": "<boolean>"
+    }
+  ]
 }
 ```
 
@@ -203,19 +230,50 @@ Derive invariants from the system map:
 
 ### Step 11 — Summarize Static Analysis
 
-Using the findings from `setupResult`, populate `static_summary`:
+Load full raw findings from `rawFindingsDir`:
+1. Read `<rawFindingsDir>/slither-findings.json` for full Slither findings.
+2. Read `<rawFindingsDir>/aderyn-findings.json` for full Aderyn findings.
+3. If a file is missing or empty, use the `topFindings` from `setupResult` as fallback.
+
+Using the full findings, populate `static_summary`:
 
 1. Count total findings and break down by severity.
 2. Group findings by category (reentrancy, access-control, unused-return, etc.).
 3. For each category, make an initial assessment: `likely_real` is true if the category findings appear genuine based on the code context you have now read, false if they appear to be false positives.
 
-### Step 12 — Call build-system-map Tool
+### Step 12 — Emit AuditUnits
 
-Call `mcp__sc-auditor__build-system-map` with `{ "rootDir": "<rootDir>" }` to generate the authoritative SystemMapArtifact. Merge any additional insights from your manual analysis (Steps 1-11) into the tool's output to produce the final artifact.
+For each `public` or `external` function that performs state changes (identified from `external_surfaces` where `state_writes` is non-empty), emit a compact AuditUnit:
+
+```json
+{
+  "contract": "<string>",
+  "function": "<string>(params)",
+  "body_lines": { "start": "<number>", "end": "<number>" },
+  "modifiers": ["<string>"],
+  "one_hop_callers": ["<Contract.function>"],
+  "one_hop_callees": ["<Contract.function or external target>"],
+  "storage_reads": ["<variable>"],
+  "storage_writes": ["<variable>"],
+  "external_calls": ["<target.function>"],
+  "events_emitted": ["<EventName>"],
+  "related_invariants": ["<INV-xxx>"],
+  "value_transfer": true | false
+}
+```
+
+Add the AuditUnits as a new field in the SystemMapArtifact output (`audit_units`).
+
+Every state-changing public/external function MUST have an AuditUnit. This ensures the HUNT phase has complete coverage — every function gets at least one review pass.
 
 ### Step 13 — Emit Output
 
 Return the complete `SystemMapArtifact` JSON object. Every field must be present. Use empty arrays `[]` for fields where no items were found. Do NOT omit any field.
+
+## Output Format
+
+Your ENTIRE response must be valid JSON matching the Output Schema above.
+Do NOT wrap in markdown code fences. Do NOT include prose before or after the JSON.
 
 ## Disallowed Behaviors
 

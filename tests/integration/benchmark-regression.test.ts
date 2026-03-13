@@ -1,197 +1,110 @@
 /**
- * Benchmark regression integration tests.
+ * Benchmark regression tests for v0.4.0 methodology.
  *
- * Models three known miss classes (callback grief, accounting entitlement
- * drift, and semantic drift) using real fixture files with actual MAP
- * builder and hotspot ranking.
+ * v0.4.0: SystemMap building, hotspot ranking, and verification are now
+ * prompt-driven (sub-agent phases), not TypeScript functions. These tests
+ * verify the remaining TypeScript infrastructure that supports the methodology.
+ *
+ * End-to-end methodology testing requires running the /security-auditor skill.
  */
 
+import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { buildSystemMap } from "../../src/core/map-builder.js";
-import { deriveHotspots } from "../../src/core/hotspot-ranking.js";
-import { applyProofToFinding } from "../../src/core/verification.js";
-import { buildAuditReport } from "../../src/report/audit-report.js";
-import type { Finding } from "../../src/types/finding.js";
-import type { ProofResult } from "../../src/core/verification.js";
+import type { Finding, FindingStatus } from "../../src/types/finding.js";
 
 const FIXTURES_DIR = resolve(import.meta.dirname, "../fixtures/solidity");
 
-describe("Benchmark: callback grief path", () => {
-  it("CallbackGrief.sol produces a callback_liveness hotspot", async () => {
-    const artifact = await buildSystemMap(FIXTURES_DIR);
+describe("Benchmark: fixture contracts exist", () => {
+  const EXPECTED_FIXTURES = [
+    "SimpleVault.sol",
+    "CallbackGrief.sol",
+    "EntitlementDrift.sol",
+    "SemanticDrift.sol",
+  ];
 
-    // Verify artifact contains external_call_sites with a callback pattern
-    const callbackCalls = artifact.external_call_sites.filter(
-      (c) => c.contract === "CallbackGrief",
-    );
-    expect(callbackCalls.length).toBeGreaterThan(0);
-
-    const hotspots = deriveHotspots(artifact, [], "default");
-    expect(hotspots.some((h) => h.lane === "callback_liveness")).toBe(true);
-  });
-
-  it("callback_liveness hotspot references the grief vector", async () => {
-    const artifact = await buildSystemMap(FIXTURES_DIR);
-    const hotspots = deriveHotspots(artifact, [], "default");
-
-    const callbackHotspot = hotspots.find((h) => h.lane === "callback_liveness");
-    expect(callbackHotspot).toBeDefined();
-
-    // The hotspot's evidence or title should reference relevant contract/function
-    const hasRelevantContext =
-      callbackHotspot?.title.includes("CallbackGrief") ||
-      callbackHotspot?.affected_functions.some((f) => f.includes("CallbackGrief")) ||
-      callbackHotspot?.evidence.some((e) => e.detail.includes("call"));
-    expect(hasRelevantContext).toBe(true);
-  });
+  for (const fixture of EXPECTED_FIXTURES) {
+    it(`${fixture} exists in fixtures directory`, () => {
+      expect(existsSync(resolve(FIXTURES_DIR, fixture))).toBe(true);
+    });
+  }
 });
 
-describe("Benchmark: accounting entitlement drift path", () => {
-  it("EntitlementDrift.sol produces state variables shares and totalShares", async () => {
-    const artifact = await buildSystemMap(FIXTURES_DIR);
-
-    const shares = artifact.state_variables.find(
-      (v) => v.contract === "EntitlementDrift" && v.name === "shares",
-    );
-    expect(shares).toBeDefined();
-
-    const totalShares = artifact.state_variables.find(
-      (v) => v.contract === "EntitlementDrift" && v.name === "totalShares",
-    );
-    expect(totalShares).toBeDefined();
+describe("Benchmark: Finding type supports v0.4.0 status values", () => {
+  it("judge_confirmed is a valid FindingStatus", () => {
+    const status: FindingStatus = "judge_confirmed";
+    expect(status).toBe("judge_confirmed");
   });
 
-  it("derives a balance invariant for EntitlementDrift shares/totalShares", async () => {
-    const artifact = await buildSystemMap(FIXTURES_DIR);
-
-    const sharesInvariant = artifact.protocol_invariants.find(
-      (inv) => inv.description.includes("totalShares") && inv.description.includes("shares"),
-    );
-    expect(sharesInvariant).toBeDefined();
-  });
-});
-
-describe("Benchmark: semantic drift path", () => {
-  it("SemanticDrift.sol produces config_semantics with taxCut conflict", async () => {
-    const artifact = await buildSystemMap(FIXTURES_DIR);
-
-    const taxCutSemantics = artifact.config_semantics.filter(
-      (cs) => cs.variable === "taxCut",
-    );
-    expect(taxCutSemantics.length).toBeGreaterThanOrEqual(2);
-
-    const hasConflict = taxCutSemantics.some(
-      (cs) => cs.conflicts_with && cs.conflicts_with.length > 0,
-    );
-    expect(hasConflict).toBe(true);
-  });
-
-  it("SemanticDrift.sol produces a semantic_consistency hotspot", async () => {
-    const artifact = await buildSystemMap(FIXTURES_DIR);
-    const hotspots = deriveHotspots(artifact, [], "default");
-    expect(hotspots.some((h) => h.lane === "semantic_consistency")).toBe(true);
-  });
-
-  it("semantic_consistency hotspot mentions taxCut variable", async () => {
-    const artifact = await buildSystemMap(FIXTURES_DIR);
-    const hotspots = deriveHotspots(artifact, [], "default");
-    const semanticHotspot = hotspots.find((h) => h.lane === "semantic_consistency");
-    expect(semanticHotspot).toBeDefined();
-    expect(semanticHotspot?.title).toContain("taxCut");
-  });
-});
-
-describe("Benchmark: verification state transitions", () => {
-  it("finding derived from hotspot can go through verify-finding flow", async () => {
-    const artifact = await buildSystemMap(FIXTURES_DIR);
-    const hotspots = deriveHotspots(artifact, [], "default");
-    expect(hotspots.length).toBeGreaterThan(0);
-
-    const hotspot = hotspots[0];
+  it("Finding supports exploit_sketch field", () => {
     const finding: Finding = {
-      title: hotspot.title,
+      title: "Test finding",
       severity: "HIGH",
       confidence: "Likely",
       source: "manual",
-      category: "reentrancy",
-      affected_files: hotspot.affected_files.length > 0 ? hotspot.affected_files : ["test.sol"],
+      category: "state_machine_gap",
+      affected_files: ["test.sol"],
       affected_lines: { start: 1, end: 10 },
-      description: hotspot.root_cause_hypothesis,
-      evidence_sources: [{ type: "static_analysis", tool: "manual" }],
-      status: "candidate",
-      proof_type: "none",
+      description: "Test",
+      evidence_sources: [],
+      status: "judge_confirmed",
+      exploit_sketch: {
+        attacker: "unprivileged user",
+        capabilities: ["deploy contracts"],
+        preconditions: ["pool has liquidity"],
+        tx_sequence: ["deposit", "withdraw"],
+        state_deltas: ["balance decreased"],
+        broken_invariant: "INV-001",
+        numeric_example: "deposit 1 wei, get 1 share",
+        same_fix_test: "add nonReentrant modifier",
+      },
     };
-
-    // Initially candidate
-    expect(finding.status).toBe("candidate");
-
-    // Apply a successful proof
-    const proof: ProofResult = {
-      success: true,
-      proof_type: "foundry_poc",
-      witness_path: "/tmp/test_poc.t.sol",
-      details: "PoC confirmed reentrancy",
-    };
-
-    const verified = applyProofToFinding(finding, proof);
-    expect(verified.status).toBe("verified");
-    expect(verified.proof_type).toBe("foundry_poc");
-    expect(verified.benchmark_mode_visible).toBe(true);
+    expect(finding.exploit_sketch).toBeDefined();
+    expect(finding.status).toBe("judge_confirmed");
   });
 
-  it("benchmark mode correctly gates unproven HIGH findings", async () => {
-    const artifact = await buildSystemMap(FIXTURES_DIR);
-
-    const unprovenFinding: Finding = {
-      title: "Unproven reentrancy",
-      severity: "HIGH",
-      confidence: "Likely",
-      source: "slither",
-      category: "reentrancy",
-      affected_files: ["CallbackGrief.sol"],
-      affected_lines: { start: 11, end: 15 },
-      description: "Potential reentrancy in transferToken",
-      evidence_sources: [{ type: "static_analysis", tool: "slither" }],
-      status: "verified",
-      proof_type: "none",
+  it("Finding supports da_mitigation field", () => {
+    const finding: Finding = {
+      title: "Test finding",
+      severity: "MEDIUM",
+      confidence: "Possible",
+      source: "manual",
+      category: "config_dependent",
+      affected_files: ["test.sol"],
+      affected_lines: { start: 1, end: 5 },
+      description: "Test",
+      evidence_sources: [],
+      da_mitigation: [
+        { check: "nonReentrant guard", score: -3, evidence: "Found on line 10" },
+        { check: "access control", score: 0, evidence: "No restriction found" },
+      ],
     };
-
-    const provenFinding: Finding = {
-      title: "Proven reentrancy",
-      severity: "HIGH",
-      confidence: "Confirmed",
-      source: "slither",
-      category: "reentrancy",
-      affected_files: ["CallbackGrief.sol"],
-      affected_lines: { start: 11, end: 15 },
-      description: "Proven reentrancy in transferToken",
-      evidence_sources: [{ type: "static_analysis", tool: "slither" }],
-      status: "verified",
-      proof_type: "foundry_poc",
-      witness_path: "/tmp/poc.t.sol",
-    };
-
-    const report = buildAuditReport(
-      [unprovenFinding, provenFinding],
-      artifact,
-      "benchmark",
-    );
-
-    // Unproven HIGH should be gated (moved to research_candidates)
-    expect(report.scored_findings).toHaveLength(1);
-    expect(report.scored_findings[0].title).toBe("Proven reentrancy");
-    expect(report.research_candidates).toHaveLength(1);
-    expect(report.research_candidates[0].title).toBe("Unproven reentrancy");
+    expect(finding.da_mitigation).toHaveLength(2);
+    expect(finding.da_mitigation?.[0].score).toBe(-3);
   });
 
-  it("each fixture reaches the expected hotspot lane", async () => {
-    const artifact = await buildSystemMap(FIXTURES_DIR);
-    const hotspots = deriveHotspots(artifact, [], "default");
-
-    const lanes = new Set(hotspots.map((h) => h.lane));
-    expect(lanes.has("callback_liveness")).toBe(true);
-    expect(lanes.has("semantic_consistency")).toBe(true);
+  it("new detector categories are valid", () => {
+    const categories = [
+      "state_machine_gap",
+      "config_dependent",
+      "design_tradeoff",
+      "missing_validation",
+      "economic_differential",
+    ];
+    for (const category of categories) {
+      const finding: Finding = {
+        title: "Test",
+        severity: "LOW",
+        confidence: "Possible",
+        source: "manual",
+        category,
+        affected_files: ["test.sol"],
+        affected_lines: { start: 1, end: 1 },
+        description: "Test",
+        evidence_sources: [],
+      };
+      expect(finding.category).toBe(category);
+    }
   });
 });

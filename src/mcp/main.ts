@@ -9,8 +9,6 @@
 import { fileURLToPath } from "node:url";
 
 import { createMcpServer, startStdio } from "./server.js";
-import { registerBuildSystemMapTool } from "./tools/build-system-map.js";
-import { registerDeriveHotspotsTool } from "./tools/derive-hotspots.js";
 import { registerGenerateFoundryPocTool } from "./tools/generate-foundry-poc.js";
 import { registerGetChecklistTool } from "./tools/get-checklist.js";
 import { registerRunAderynTool } from "./tools/run-aderyn.js";
@@ -19,7 +17,6 @@ import { registerRunHalmosTool } from "./tools/run-halmos.js";
 import { registerRunMedusaTool } from "./tools/run-medusa.js";
 import { registerRunSlitherTool } from "./tools/run-slither.js";
 import { registerSearchFindingsTool } from "./tools/search-findings.js";
-import { registerVerifyFindingTool } from "./tools/verify-finding.js";
 import { loadConfig } from "../config/loader.js";
 
 /**
@@ -29,8 +26,6 @@ import { loadConfig } from "../config/loader.js";
 export function bootServer() {
   loadConfig();
   const server = createMcpServer();
-  registerBuildSystemMapTool(server);
-  registerDeriveHotspotsTool(server);
   registerGenerateFoundryPocTool(server);
   registerRunSlitherTool(server);
   registerRunAderynTool(server);
@@ -39,7 +34,6 @@ export function bootServer() {
   registerRunHalmosTool(server);
   registerGetChecklistTool(server);
   registerSearchFindingsTool(server);
-  registerVerifyFindingTool(server);
   return server;
 }
 

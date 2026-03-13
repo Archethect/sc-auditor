@@ -19,6 +19,20 @@ const POCS_SUBDIR = "pocs";
 /**
  * Input schema for generate-foundry-poc tool.
  */
+/** Optional exploit sketch from ATTACK phase for structured scaffold sections. */
+const ExploitSketchSchema = z
+  .object({
+    attacker: z.string(),
+    capabilities: z.array(z.string()),
+    preconditions: z.array(z.string()),
+    tx_sequence: z.array(z.string()),
+    state_deltas: z.array(z.string()),
+    broken_invariant: z.string(),
+    numeric_example: z.string(),
+    same_fix_test: z.string(),
+  })
+  .optional();
+
 const GenerateFoundryPocSchema = z.object({
   rootDir: z.string().describe("Root directory of the Solidity project"),
   hotspot: z
@@ -30,6 +44,9 @@ const GenerateFoundryPocSchema = z.object({
       affected_functions: z.array(z.string()),
       candidate_attack_sequence: z.array(z.string()),
       root_cause_hypothesis: z.string(),
+      exploit_sketch: ExploitSketchSchema.describe(
+        "Structured exploit sketch from ATTACK phase. When provided, generates labeled scaffold sections instead of bare TODOs.",
+      ),
     })
     .describe("Hotspot to generate a PoC for"),
 });
@@ -78,6 +95,43 @@ function generateImports(affectedFiles: string[]): string[] {
 /**
  * Generates the Solidity test file content for a hotspot.
  */
+/**
+ * Generates structured exploit body from an exploit sketch.
+ *
+ * Produces labeled SETUP/ATTACK/ASSERTIONS sections populated from sketch fields.
+ */
+function generateExploitSketchBody(
+  sketch: NonNullable<z.infer<typeof ExploitSketchSchema>>,
+): string[] {
+  const lines: string[] = [];
+
+  lines.push("        // === SETUP: Deploy contracts and configure state ===");
+  for (const pre of sketch.preconditions) {
+    lines.push(`        // Precondition: ${pre}`);
+  }
+  lines.push("");
+
+  lines.push("        // === ATTACK: Execute exploit sequence ===");
+  sketch.tx_sequence.forEach((step, i) => {
+    lines.push(`        // Step ${i + 1}: ${step}`);
+  });
+  lines.push("");
+
+  if (sketch.state_deltas.length > 0) {
+    lines.push("        // === STATE DELTAS ===");
+    for (const delta of sketch.state_deltas) {
+      lines.push(`        // ${delta}`);
+    }
+    lines.push("");
+  }
+
+  lines.push("        // === ASSERTIONS: Verify exploit succeeded ===");
+  lines.push(`        // Broken invariant: ${sketch.broken_invariant}`);
+  lines.push(`        // Expected: ${sketch.numeric_example}`);
+
+  return lines;
+}
+
 function generateTestFileContent(
   hotspot: z.infer<typeof GenerateFoundryPocSchema>["hotspot"],
 ): string {
@@ -93,9 +147,15 @@ function generateTestFileContent(
     .map((name) => `        target_${name.toLowerCase()} = new ${name}();`)
     .join("\n");
 
-  const attackSteps = hotspot.candidate_attack_sequence
-    .map((step) => `        // ${step}`)
-    .join("\n");
+  const exploitBody = hotspot.exploit_sketch
+    ? generateExploitSketchBody(hotspot.exploit_sketch)
+    : [
+        `        // Attack sequence for: ${hotspot.title}`,
+        ...hotspot.candidate_attack_sequence.map((step) => `        // ${step}`),
+        "",
+        "        // TODO: Implement exploit logic",
+        "        // TODO: Add assertions to verify exploit succeeded",
+      ];
 
   const lines = [
     "// SPDX-License-Identifier: MIT",
@@ -117,11 +177,7 @@ function generateTestFileContent(
     "    }",
     "",
     `    function test_exploit_${hotspot.id.replace(/[^a-zA-Z0-9]/g, "_")}() public {`,
-    `        // Attack sequence for: ${hotspot.title}`,
-    attackSteps,
-    "",
-    "        // TODO: Implement exploit logic",
-    "        // TODO: Add assertions to verify exploit succeeded",
+    ...exploitBody,
     "    }",
     "}",
     "",
