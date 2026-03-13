@@ -2,8 +2,13 @@
  * Aderyn output parser.
  *
  * Parses Aderyn JSON output and transforms it into Finding[] format.
+ * Uses the static normalization layer for category and confidence mapping.
  */
 
+import {
+  normalizeConfidence,
+  normalizeDetectorCategory,
+} from "./parser-utils.js";
 import type { Finding, FindingSeverity } from "../../types/finding.js";
 
 /**
@@ -41,46 +46,69 @@ export interface AderynOutput {
   low_issues: AderynIssuesContainer;
 }
 
+/** Maps severity level to its raw confidence key for normalization. */
+const SEVERITY_TO_CONFIDENCE_KEY: Record<string, string> = {
+  HIGH: "high_issues",
+  LOW: "low_issues",
+};
+
 /**
  * Converts an Aderyn issue to a Finding.
  */
 function issueToFinding(issue: AderynIssue, severity: FindingSeverity): Finding {
   const instances = Array.isArray(issue.instances) ? issue.instances : [];
+  const detectorName = issue.detector_name ?? "unknown-detector";
+  const confidenceKey = SEVERITY_TO_CONFIDENCE_KEY[severity] ?? "low_issues";
+  const category = normalizeDetectorCategory(detectorName, "aderyn");
 
-  // Extract unique file paths from instances
+  return {
+    title: issue.title ?? "unknown-issue",
+    severity,
+    confidence: normalizeConfidence("aderyn", confidenceKey),
+    source: "aderyn",
+    category,
+    affected_files: extractFilePaths(instances),
+    affected_lines: extractLineRange(instances),
+    description: issue.description ?? "",
+    detector_id: detectorName,
+    evidence_sources: [
+      {
+        type: "static_analysis",
+        tool: "aderyn",
+        detector_id: detectorName,
+      },
+    ],
+    status: "candidate",
+    proof_type: "none",
+    independence_count: 1,
+    benchmark_mode_visible: true,
+  };
+}
+
+/**
+ * Extracts unique file paths from Aderyn instances.
+ */
+function extractFilePaths(instances: AderynInstance[]): string[] {
   const filePaths = new Set<string>();
   for (const instance of instances) {
     if (instance.contract_path) {
       filePaths.add(instance.contract_path);
     }
   }
+  return [...filePaths];
+}
 
-  // Extract line range from all instances (min/max)
+/**
+ * Extracts line range from Aderyn instances.
+ */
+function extractLineRange(instances: AderynInstance[]): { start: number; end: number } {
   const lineNumbers = instances
     .map((instance) => instance.line_no)
     .filter((lineNo): lineNo is number => typeof lineNo === "number" && lineNo > 0);
-  const lineRange = lineNumbers.length > 0
-    ? { start: Math.min(...lineNumbers), end: Math.max(...lineNumbers) }
-    : { start: 0, end: 0 };
-
-  return {
-    title: issue.title ?? "unknown-issue",
-    severity,
-    confidence: "Confirmed",
-    source: "aderyn",
-    category: "Other",
-    affected_files: [...filePaths],
-    affected_lines: lineRange,
-    description: issue.description ?? "",
-    detector_id: issue.detector_name,
-    evidence_sources: [
-      {
-        type: "static_analysis",
-        tool: "aderyn",
-        detector_id: issue.detector_name,
-      },
-    ],
-  };
+  if (lineNumbers.length === 0) {
+    return { start: 0, end: 0 };
+  }
+  return { start: Math.min(...lineNumbers), end: Math.max(...lineNumbers) };
 }
 
 /**

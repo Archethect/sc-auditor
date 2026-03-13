@@ -1,43 +1,39 @@
 /**
  * Public type exports for sc-auditor.
+ *
+ * v0.4.0: Removed architecture.ts, hotspot.ts, verification.ts, metadata.ts
+ * (now prompt-driven). Added tools.ts consolidation.
  */
 
-export type {
-  AccessControlModel,
-  ArchitectureComponent,
-  ArchitectureSummary,
-  ExternalCall,
-  FunctionSignature,
-  FunctionVisibility,
-  ProtocolType,
-  RiskLevel,
-  StateMutability,
-  StateVariable,
-} from "./architecture.js";
 export type { ChecklistItem } from "./checklist.js";
 export type {
   Config,
   LLMReasoningConfig,
+  ProofToolsConfig,
   StaticAnalysisConfig,
   UserConfig,
+  VerifyConfig,
+  WorkflowConfig,
+  WorkflowMode,
 } from "./config.js";
 export type {
+  DaChain,
+  DaDimension,
+  DaMitigation,
+  DaResult,
+  DetectorCategory,
   EvidenceSource,
   EvidenceSourceType,
+  ExploitSketch,
   Finding,
   FindingConfidence,
   FindingSeverity,
   FindingSource,
+  FindingStatus,
   LineRange,
+  ProofType,
 } from "./finding.js";
-export type {
-  AuditRunMetadata,
-  KnownRuntimeEventType,
-  ReportStatus,
-  RuntimeEventType,
-  RuntimeLogEntry,
-} from "./metadata.js";
-export type { AuditScopeEntry, CategoryAuditSummary } from "./scope.js";
+export type { AuditScopeEntry, CategoryAuditSummary, RiskLevel } from "./scope.js";
 export type {
   SoloditFinding,
   SoloditSearchResult,

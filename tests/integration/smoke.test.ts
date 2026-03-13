@@ -4,7 +4,7 @@
  * Manual Smoke Test:
  * 1. Start the MCP server: npx tsx src/mcp/main.ts
  * 2. Connect with an MCP client (e.g., Claude Desktop, mcp-cli)
- * 3. List tools — verify 4 tools: run-slither, run-aderyn, get_checklist, search_findings
+ * 3. List tools — verify 8 tools: run-slither, run-aderyn, get_checklist, search_findings, generate-foundry-poc, run-echidna, run-medusa, run-halmos
  * 4. Call get_checklist {} — verify checklist items returned
  * 5. Call run-slither { rootDir: "tests/fixtures/solidity" } — verify findings (needs slither)
  * 6. Call run-aderyn { rootDir: "tests/fixtures/solidity" } — verify findings (needs aderyn)
@@ -27,6 +27,10 @@ import { registerGetChecklistTool } from "../../src/mcp/tools/get-checklist.js";
 import { registerRunAderynTool } from "../../src/mcp/tools/run-aderyn.js";
 import { registerRunSlitherTool } from "../../src/mcp/tools/run-slither.js";
 import { registerSearchFindingsTool } from "../../src/mcp/tools/search-findings.js";
+import { registerGenerateFoundryPocTool } from "../../src/mcp/tools/generate-foundry-poc.js";
+import { registerRunEchidnaTool } from "../../src/mcp/tools/run-echidna.js";
+import { registerRunMedusaTool } from "../../src/mcp/tools/run-medusa.js";
+import { registerRunHalmosTool } from "../../src/mcp/tools/run-halmos.js";
 import { parseSlitherOutput } from "../../src/mcp/tools/slither-parser.js";
 import { fetchChecklist } from "../../src/mcp/services/checklist.js";
 
@@ -56,6 +60,10 @@ async function setupMcpTest(): Promise<{
 	registerRunAderynTool(server);
 	registerGetChecklistTool(server);
 	registerSearchFindingsTool(server);
+	registerGenerateFoundryPocTool(server);
+	registerRunEchidnaTool(server);
+	registerRunMedusaTool(server);
+	registerRunHalmosTool(server);
 	const client = new Client({ name: "test-client", version: "0.0.1" });
 
 	await server.connect(serverTransport);
@@ -124,7 +132,7 @@ describe("AC3: MCP server boots cleanly via InMemoryTransport", () => {
 	});
 });
 
-describe("AC4: client.listTools() returns all 4 tools", () => {
+describe("AC4: client.listTools() returns all 8 tools", () => {
 	let tools: Tool[];
 	let cleanup: () => Promise<void>;
 
@@ -138,13 +146,22 @@ describe("AC4: client.listTools() returns all 4 tools", () => {
 		await cleanup();
 	});
 
-	it("returns exactly 4 tools", () => {
-		expect(tools).toHaveLength(4);
+	it("returns exactly 8 tools", () => {
+		expect(tools).toHaveLength(8);
 	});
 
-	it("includes run-slither, run-aderyn, get_checklist, search_findings", () => {
+	it("includes run-slither, run-aderyn, get_checklist, search_findings, generate-foundry-poc, run-echidna, run-medusa, run-halmos", () => {
 		const names = tools.map((t) => t.name).sort();
-		expect(names).toEqual(["get_checklist", "run-aderyn", "run-slither", "search_findings"]);
+		expect(names).toEqual([
+			"generate-foundry-poc",
+			"get_checklist",
+			"run-aderyn",
+			"run-echidna",
+			"run-halmos",
+			"run-medusa",
+			"run-slither",
+			"search_findings",
+		]);
 	});
 });
 
@@ -208,7 +225,7 @@ describe("AC7: Skill file existence + YAML frontmatter", () => {
 		expect(existsSync(SKILL_PATH)).toBe(true);
 	});
 
-	it("YAML frontmatter parses and references all 4 MCP tools", () => {
+	it("YAML frontmatter parses and references MCP tools", () => {
 		const content = readFileSync(SKILL_PATH, "utf-8");
 		const frontmatter = extractFrontmatter(content);
 		expect(frontmatter.name).toBe("security-auditor");

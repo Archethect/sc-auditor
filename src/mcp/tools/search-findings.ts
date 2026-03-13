@@ -218,6 +218,11 @@ async function executeRequest(
 
 /**
  * Registers the search_findings tool on the MCP server.
+ *
+ * Usage Policy (v0.4.0):
+ * - HUNT phase: Do NOT use for hotspot creation. Use offline attack-vector packs instead.
+ * - ATTACK phase: MAY use for corroboration of already-identified attack paths.
+ * - VERIFY phase: MAY use for strengthening or weakening evidence.
  */
 export function registerSearchFindingsTool(server: McpServer): void {
   server.registerTool(

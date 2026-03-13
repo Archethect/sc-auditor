@@ -60,6 +60,22 @@ describe("loadConfig", () => {
           max_functions_per_category: 50,
           context_window_budget: 0.7,
         },
+        workflow: {
+          mode: "default",
+          parallel_hunters: false,
+          autonomous: false,
+          require_witness_for_high: false,
+        },
+        proof_tools: {
+          foundry_enabled: true,
+          echidna_enabled: false,
+          medusa_enabled: false,
+          halmos_enabled: false,
+          ityfuzz_enabled: false,
+        },
+        verify: {
+          demote_unproven_medium_high: false,
+        },
       });
     });
 
@@ -133,6 +149,22 @@ describe("loadConfig", () => {
         llm_reasoning: {
           max_functions_per_category: 50,
           context_window_budget: 0.7,
+        },
+        workflow: {
+          mode: "default",
+          parallel_hunters: false,
+          autonomous: false,
+          require_witness_for_high: false,
+        },
+        proof_tools: {
+          foundry_enabled: true,
+          echidna_enabled: false,
+          medusa_enabled: false,
+          halmos_enabled: false,
+          ityfuzz_enabled: false,
+        },
+        verify: {
+          demote_unproven_medium_high: false,
         },
       });
     });
@@ -517,6 +549,194 @@ describe("loadConfig", () => {
     it("CONFIG_INVALID error follows ERROR: <TYPE> - <message> format", () => {
       writeFileSync(join(tempDir, "config.json"), "[1,2]", "utf-8");
       expect(() => loadConfig(tempDir)).toThrow(/^ERROR: [A-Z_]+ - .+/);
+    });
+  });
+
+  // --- Workflow config ---
+
+  describe("workflow config", () => {
+    it("defaults workflow.mode to 'default'", () => {
+      writeConfig(tempDir, {});
+      expect(loadConfig(tempDir).workflow.mode).toBe("default");
+    });
+
+    it("accepts workflow.mode: 'deep'", () => {
+      writeConfig(tempDir, { workflow: { mode: "deep" } });
+      expect(loadConfig(tempDir).workflow.mode).toBe("deep");
+    });
+
+    it("accepts workflow.mode: 'benchmark'", () => {
+      writeConfig(tempDir, { workflow: { mode: "benchmark" } });
+      expect(loadConfig(tempDir).workflow.mode).toBe("benchmark");
+    });
+
+    it("fails when workflow.mode is invalid", () => {
+      writeConfig(tempDir, { workflow: { mode: "turbo" } });
+      expect(() => loadConfig(tempDir)).toThrow("workflow.mode");
+    });
+
+    it("fails when workflow.mode is a number", () => {
+      writeConfig(tempDir, { workflow: { mode: 42 } });
+      expect(() => loadConfig(tempDir)).toThrow("workflow.mode");
+    });
+
+    it("defaults workflow.parallel_hunters to false", () => {
+      writeConfig(tempDir, {});
+      expect(loadConfig(tempDir).workflow.parallel_hunters).toBe(false);
+    });
+
+    it("accepts workflow.parallel_hunters: true", () => {
+      writeConfig(tempDir, { workflow: { parallel_hunters: true } });
+      expect(loadConfig(tempDir).workflow.parallel_hunters).toBe(true);
+    });
+
+    it("fails when workflow.parallel_hunters is a string", () => {
+      writeConfig(tempDir, { workflow: { parallel_hunters: "yes" } });
+      expect(() => loadConfig(tempDir)).toThrow("parallel_hunters");
+    });
+
+    it("defaults workflow.autonomous to false", () => {
+      writeConfig(tempDir, {});
+      expect(loadConfig(tempDir).workflow.autonomous).toBe(false);
+    });
+
+    it("accepts workflow.autonomous: true", () => {
+      writeConfig(tempDir, { workflow: { autonomous: true } });
+      expect(loadConfig(tempDir).workflow.autonomous).toBe(true);
+    });
+
+    it("fails when workflow.autonomous is not a boolean", () => {
+      writeConfig(tempDir, { workflow: { autonomous: 1 } });
+      expect(() => loadConfig(tempDir)).toThrow("autonomous");
+    });
+
+    it("defaults workflow.require_witness_for_high to false", () => {
+      writeConfig(tempDir, {});
+      expect(loadConfig(tempDir).workflow.require_witness_for_high).toBe(false);
+    });
+
+    it("accepts workflow.require_witness_for_high: true", () => {
+      writeConfig(tempDir, { workflow: { require_witness_for_high: true } });
+      expect(loadConfig(tempDir).workflow.require_witness_for_high).toBe(true);
+    });
+
+    it("fails when workflow is not an object", () => {
+      writeConfig(tempDir, { workflow: "fast" });
+      expect(() => loadConfig(tempDir)).toThrow("workflow must be an object");
+    });
+
+    it("fails when workflow is an array", () => {
+      writeConfig(tempDir, { workflow: [] });
+      expect(() => loadConfig(tempDir)).toThrow("workflow must be an object");
+    });
+  });
+
+  // --- Proof tools config ---
+
+  describe("proof_tools config", () => {
+    it("defaults proof_tools.foundry_enabled to true", () => {
+      writeConfig(tempDir, {});
+      expect(loadConfig(tempDir).proof_tools.foundry_enabled).toBe(true);
+    });
+
+    it("defaults proof_tools.echidna_enabled to false", () => {
+      writeConfig(tempDir, {});
+      expect(loadConfig(tempDir).proof_tools.echidna_enabled).toBe(false);
+    });
+
+    it("defaults proof_tools.medusa_enabled to false", () => {
+      writeConfig(tempDir, {});
+      expect(loadConfig(tempDir).proof_tools.medusa_enabled).toBe(false);
+    });
+
+    it("defaults proof_tools.halmos_enabled to false", () => {
+      writeConfig(tempDir, {});
+      expect(loadConfig(tempDir).proof_tools.halmos_enabled).toBe(false);
+    });
+
+    it("defaults proof_tools.ityfuzz_enabled to false", () => {
+      writeConfig(tempDir, {});
+      expect(loadConfig(tempDir).proof_tools.ityfuzz_enabled).toBe(false);
+    });
+
+    it("accepts all proof_tools booleans set to true", () => {
+      writeConfig(tempDir, {
+        proof_tools: {
+          foundry_enabled: true,
+          echidna_enabled: true,
+          medusa_enabled: true,
+          halmos_enabled: true,
+          ityfuzz_enabled: true,
+        },
+      });
+      const config = loadConfig(tempDir);
+      expect(config.proof_tools.foundry_enabled).toBe(true);
+      expect(config.proof_tools.echidna_enabled).toBe(true);
+      expect(config.proof_tools.medusa_enabled).toBe(true);
+      expect(config.proof_tools.halmos_enabled).toBe(true);
+      expect(config.proof_tools.ityfuzz_enabled).toBe(true);
+    });
+
+    it("fails when proof_tools.foundry_enabled is not a boolean", () => {
+      writeConfig(tempDir, { proof_tools: { foundry_enabled: "yes" } });
+      expect(() => loadConfig(tempDir)).toThrow("foundry_enabled");
+    });
+
+    it("fails when proof_tools.echidna_enabled is not a boolean", () => {
+      writeConfig(tempDir, { proof_tools: { echidna_enabled: 1 } });
+      expect(() => loadConfig(tempDir)).toThrow("echidna_enabled");
+    });
+
+    it("fails when proof_tools is not an object", () => {
+      writeConfig(tempDir, { proof_tools: true });
+      expect(() => loadConfig(tempDir)).toThrow("proof_tools must be an object");
+    });
+
+    it("fails when proof_tools is an array", () => {
+      writeConfig(tempDir, { proof_tools: [] });
+      expect(() => loadConfig(tempDir)).toThrow("proof_tools must be an object");
+    });
+  });
+
+  // --- Verify config ---
+
+  describe("verify config", () => {
+    it("defaults verify.demote_unproven_medium_high to false", () => {
+      writeConfig(tempDir, {});
+      expect(loadConfig(tempDir).verify.demote_unproven_medium_high).toBe(false);
+    });
+
+    it("accepts verify.demote_unproven_medium_high: true", () => {
+      writeConfig(tempDir, { verify: { demote_unproven_medium_high: true } });
+      expect(loadConfig(tempDir).verify.demote_unproven_medium_high).toBe(true);
+    });
+
+    it("fails when verify.demote_unproven_medium_high is not a boolean", () => {
+      writeConfig(tempDir, { verify: { demote_unproven_medium_high: "yes" } });
+      expect(() => loadConfig(tempDir)).toThrow("demote_unproven_medium_high");
+    });
+
+    it("fails when verify is not an object", () => {
+      writeConfig(tempDir, { verify: "strict" });
+      expect(() => loadConfig(tempDir)).toThrow("verify must be an object");
+    });
+
+    it("defaults verify.demote_unproven_medium_high to true in benchmark mode", () => {
+      writeConfig(tempDir, { workflow: { mode: "benchmark" } });
+      expect(loadConfig(tempDir).verify.demote_unproven_medium_high).toBe(true);
+    });
+
+    it("allows explicit verify.demote_unproven_medium_high: false even in benchmark mode", () => {
+      writeConfig(tempDir, {
+        workflow: { mode: "benchmark" },
+        verify: { demote_unproven_medium_high: false },
+      });
+      expect(loadConfig(tempDir).verify.demote_unproven_medium_high).toBe(false);
+    });
+
+    it("defaults verify.demote_unproven_medium_high to false in deep mode", () => {
+      writeConfig(tempDir, { workflow: { mode: "deep" } });
+      expect(loadConfig(tempDir).verify.demote_unproven_medium_high).toBe(false);
     });
   });
 });

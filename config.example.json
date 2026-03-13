@@ -13,5 +13,21 @@
   "llm_reasoning": {
     "max_functions_per_category": 50,
     "context_window_budget": 0.7
+  },
+  "workflow": {
+    "mode": "default",
+    "parallel_hunters": false,
+    "autonomous": false,
+    "require_witness_for_high": false
+  },
+  "proof_tools": {
+    "foundry_enabled": true,
+    "echidna_enabled": false,
+    "medusa_enabled": false,
+    "halmos_enabled": false,
+    "ityfuzz_enabled": false
+  },
+  "verify": {
+    "demote_unproven_medium_high": false
   }
 }

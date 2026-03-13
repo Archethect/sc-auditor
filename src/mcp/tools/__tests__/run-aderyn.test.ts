@@ -129,7 +129,7 @@ describe("Integration: run-aderyn tool end-to-end flow", () => {
       expect(parsed.findings).toHaveLength(1);
       expect(parsed.findings[0].title).toBe("Centralization Risk");
       expect(parsed.findings[0].severity).toBe("HIGH");
-      expect(parsed.findings[0].confidence).toBe("Confirmed");
+      expect(parsed.findings[0].confidence).toBe("Likely");
       expect(parsed.findings[0].source).toBe("aderyn");
       expect(parsed.findings[0].affected_files).toEqual(["contracts/Vault.sol"]);
       expect(parsed.findings[0].affected_lines).toEqual({ start: 10, end: 10 });

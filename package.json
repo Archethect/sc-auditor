@@ -1,6 +1,6 @@
 {
   "name": "sc-auditor",
-  "version": "0.3.0",
+  "version": "2.0.0",
   "description": "Smart Contract Security Auditor Plugin",
   "type": "module",
   "main": "dist/mcp/main.js",
@@ -28,8 +28,9 @@
   ],
   "scripts": {
     "build": "tsc",
-    "postbuild": "node -e \"const f='dist/mcp/main.js';const c=require('fs').readFileSync(f,'utf8');if(!c.startsWith('#!'))require('fs').writeFileSync(f,'#!/usr/bin/env node\\n'+c)\"",
-    "prepare": "tsc",
+    "build:agents": "node scripts/build-agents.mjs",
+    "postbuild": "node -e \"const f='dist/mcp/main.js';const c=require('fs').readFileSync(f,'utf8');if(!c.startsWith('#!'))require('fs').writeFileSync(f,'#!/usr/bin/env node\\n'+c)\" && npm run build:agents",
+    "prepare": "tsc && npm run build:agents",
     "typecheck": "tsc --noEmit -p tsconfig.check.json",
     "lint": "biome lint",
     "test": "vitest run"
